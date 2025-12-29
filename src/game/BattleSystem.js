@@ -92,10 +92,17 @@ export class BattleSystem {
     return { status: true, damageInfo }; // 返回成功状态和伤害信息
   }
 
-  // 获取卡牌费用
+  // 获取卡牌费用（与杀戮尖塔一致：升级后cost减少1，最低为0）
   getCardCost(card) {
     if (card.cost === 'X') return 0; // X费用需要特殊处理
-    return card.cost || 0;
+    let cost = card.cost || 0;
+    
+    // 如果卡牌已升级，cost减少1（最低为0）
+    if (card.upgraded && cost > 0) {
+      cost = Math.max(0, cost - 1);
+    }
+    
+    return cost;
   }
 
   // 应用卡牌效果

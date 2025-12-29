@@ -1,6 +1,6 @@
-import { RELIC_RARITY } from '../data/relics.js';
+import { RELIC_RARITY, RELICS } from '../data/relics.js';
 import { getCardsByCharacter } from '../data/cards.js';
-import { CARD_RARITY } from '../types/index.js';
+import { CARD_RARITY, CARD_TYPE } from '../types/index.js';
 
 export class ShopSystem {
   constructor(player) {
@@ -33,11 +33,49 @@ export class ShopSystem {
     return 50; // COMMON
   }
 
-  // 生成商店遗物
+  // 生成商店遗物（与杀戮尖塔一致：3件遗物，最右边一件必定是商店遗物）
   generateShopRelics() {
-    return [
-      { id: 'lantern', name: '灯笼', rarity: RELIC_RARITY.COMMON, price: 150, description: '每回合开始时，获得1点额外能量。' }
-    ];
+    const shopRelics = [];
+    
+    // 筛选出可以在商店出售的遗物（排除BOSS和SHOP类型）
+    const availableRelics = RELICS.filter(relic => 
+      relic.rarity !== RELIC_RARITY.BOSS && 
+      relic.rarity !== RELIC_RARITY.SHOP &&
+      relic.rarity !== RELIC_RARITY.SPECIAL
+    );
+    
+    // 随机选择2件普通遗物
+    const shuffled = [...availableRelics].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < Math.min(2, shuffled.length); i++) {
+      const relic = { ...shuffled[i], price: this.getRelicPrice(shuffled[i]) };
+      shopRelics.push(relic);
+    }
+    
+    // 最右边一件必定是商店遗物（SHOP类型）
+    const shopOnlyRelics = RELICS.filter(relic => relic.rarity === RELIC_RARITY.SHOP);
+    if (shopOnlyRelics.length > 0) {
+      const shopRelic = shopOnlyRelics[Math.floor(Math.random() * shopOnlyRelics.length)];
+      shopRelics.push({ ...shopRelic, price: this.getRelicPrice(shopRelic) });
+    } else {
+      // 如果没有商店遗物，添加一个默认的
+      shopRelics.push({ 
+        id: 'membership_card', 
+        name: '会员卡', 
+        rarity: RELIC_RARITY.SHOP, 
+        price: 200, 
+        description: '商店中的商品价格降低50%。' 
+      });
+    }
+    
+    return shopRelics;
+  }
+  
+  // 获取遗物价格
+  getRelicPrice(relic) {
+    if (relic.rarity === RELIC_RARITY.SHOP) return 200; // 商店遗物固定200
+    if (relic.rarity === RELIC_RARITY.RARE) return 300;
+    if (relic.rarity === RELIC_RARITY.UNCOMMON) return 150;
+    return 100; // COMMON
   }
 
   // 生成商店药水
