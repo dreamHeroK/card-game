@@ -1,0 +1,141 @@
+.shop-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  padding: 20px;
+  overflow-y: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.shop-header h1 {
+  margin: 0;
+  font-size: 36px;
+}
+
+.player-gold {
+  font-size: 24px;
+  font-weight: bold;
+  color: #f1c40f;
+}
+
+.shop-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.shop-section {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.shop-section h2 {
+  margin-top: 0;
+  color: #4ecdc4;
+}
+
+.shop-items {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.shop-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.item-name {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.item-description {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.item-price {
+  font-size: 16px;
+  color: #f1c40f;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.shop-item button {
+  width: 100%;
+  padding: 10px;
+  background: #4ecdc4;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.shop-item button:hover:not(:disabled) {
+  background: #45b8b0;
+  transform: scale(1.05);
+}
+
+.shop-item button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deck-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.deck-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.deck-card button {
+  padding: 6px 12px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.deck-card button:hover:not(:disabled) {
+  background: #c0392b;
+}
+
+.deck-card button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
