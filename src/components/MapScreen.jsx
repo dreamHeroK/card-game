@@ -71,9 +71,18 @@ export default function MapScreen({ map, player, onNodeClick }) {
     // 延迟更新连线，确保所有节点ref都已设置
     const timer = setTimeout(() => {
       setConnectionUpdateTrigger(prev => prev + 1);
-    }, 200);
+    }, 300);
     return () => clearTimeout(timer);
   }, [nodesByFloor, connections, currentNode?.id]);
+  
+  // 当窗口大小变化时，重新绘制连线
+  useEffect(() => {
+    const handleResize = () => {
+      setConnectionUpdateTrigger(prev => prev + 1);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className="map-screen">
