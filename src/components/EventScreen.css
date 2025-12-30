@@ -1,0 +1,130 @@
+.event-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.event-container {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 3px solid #4ecdc4;
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  color: white;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.event-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.event-name {
+  font-size: 28px;
+  font-weight: bold;
+  color: #4ecdc4;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+}
+
+.event-description {
+  font-size: 18px;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.event-result {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(78, 205, 196, 0.2);
+  border: 2px solid #4ecdc4;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 16px;
+  color: #4ecdc4;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.event-result.error {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: #ff4444;
+  color: #ff6b6b;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.event-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.event-option {
+  padding: 15px 20px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: left;
+}
+
+.event-option:hover:not(:disabled) {
+  background: rgba(78, 205, 196, 0.3);
+  border-color: #4ecdc4;
+  transform: translateX(5px);
+}
+
+.event-option.selected {
+  background: rgba(78, 205, 196, 0.5);
+  border-color: #4ecdc4;
+  box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+}
+
+.event-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.event-leave {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.event-leave:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+

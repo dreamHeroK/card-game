@@ -1,6 +1,8 @@
 // 地图系统
 import { NODE_TYPE } from '../types/index.js';
 import { getRandomMonster, MONSTER_TYPE } from '../data/monsters.js';
+import { getRandomEvent } from '../data/events.js';
+import { getRandomRelic } from '../data/relics.js';
 
 export class MapSystem {
   constructor(act = 1) {
@@ -30,12 +32,31 @@ export class MapSystem {
     // 第一层：创建4个节点，形成4条路径的起点
     const firstFloorNodes = [];
     for (let i = 0; i < 4; i++) {
-      const nodeType = this.getNodeTypeForFloor(1);
+      const nodeType = this.getNodeTypeForFloor();
       const node = this.createNode(1, nodeType, this.act);
       firstFloorNodes.push(node);
       this.nodes.push(node);
       // 每个节点都连接到对应的起始节点（形成4条独立路径）
       this.connections.push({ from: startNodes[i].id, to: node.id });
+    }
+    
+    // 收集所有中间层的节点位置（用于精英节点分配）
+    const allMiddleFloorPositions = [];
+    for (let floor = 2; floor < this.maxFloor - 2; floor++) {
+      const nodeCount = this.getNodeCountForFloor(floor);
+      for (let i = 0; i < nodeCount; i++) {
+        allMiddleFloorPositions.push({ floor, index: i });
+      }
+    }
+    
+    // 随机选择至少2个精英节点位置（确保至少有2次精英战斗）
+    const eliteCount = Math.max(2, Math.min(3, Math.floor(allMiddleFloorPositions.length * 0.15)));
+    const elitePositions = [];
+    const shuffledPositions = [...allMiddleFloorPositions].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < eliteCount; i++) {
+      if (shuffledPositions.length > 0) {
+        elitePositions.push(shuffledPositions.pop());
+      }
     }
     
     // 生成中间层（2到maxFloor-2）
@@ -47,7 +68,11 @@ export class MapSystem {
       const floorNodes = [];
       
       for (let i = 0; i < nodeCount; i++) {
-        const nodeType = this.getNodeTypeForFloor(floor);
+        // 检查当前位置是否被分配为精英
+        const isElite = elitePositions.some(pos => pos.floor === floor && pos.index === i);
+        const nodeType = isElite 
+          ? NODE_TYPE.ELITE 
+          : this.getNodeTypeForFloor(floor);
         const node = this.createNode(floor, nodeType, this.act);
         floorNodes.push(node);
         this.nodes.push(node);
@@ -60,7 +85,7 @@ export class MapSystem {
         const connectionCount = Math.min(3, previousFloorNodes.length);
         const connectedNodes = new Set();
         
-        for (let i = 0; i < connectionCount; i++) {
+        for (let j = 0; j < connectionCount; j++) {
           const prevNode = previousFloorNodes[Math.floor(Math.random() * previousFloorNodes.length)];
           if (!connectedNodes.has(prevNode.id)) {
             connectedNodes.add(prevNode.id);
@@ -104,14 +129,19 @@ export class MapSystem {
     return this.connections;
   }
 
-  // 获取节点类型
-  getNodeTypeForFloor(floor) {
+  // 获取节点类型（排除已分配的精英节点）
+  getNodeTypeForFloor() {
     const rand = Math.random();
-    if (rand < 0.1 && floor > 3) return NODE_TYPE.ELITE;
-    if (rand < 0.15) return NODE_TYPE.SHOP;
-    if (rand < 0.2) return NODE_TYPE.TREASURE;
-    if (rand < 0.25) return NODE_TYPE.EVENT;
-    return NODE_TYPE.MONSTER;
+    
+    // 调整比例：事件和战斗比例一致（各约45%），其他类型各约5%
+    // 事件：45%（与战斗事件比例一致）
+    if (rand < 0.45) return NODE_TYPE.EVENT;
+    // 普通战斗：45%（与事件比例一致）
+    if (rand < 0.9) return NODE_TYPE.MONSTER;
+    // 商店：5%
+    if (rand < 0.95) return NODE_TYPE.SHOP;
+    // 宝箱：5%
+    return NODE_TYPE.TREASURE;
   }
 
   // 创建节点
@@ -200,7 +230,7 @@ export class MapSystem {
         };
       case NODE_TYPE.EVENT:
         return {
-          event: 'random_event'
+          event: this.generateRandomEvent()
         };
       default:
         return {};
@@ -209,12 +239,17 @@ export class MapSystem {
 
   // 生成宝箱遗物
   generateTreasureRelic() {
-    return {
+    return getRandomRelic() || {
       id: 'test_relic',
       name: '测试遗物',
       rarity: 'common',
       description: '测试用遗物'
     };
+  }
+  
+  // 生成随机事件
+  generateRandomEvent() {
+    return getRandomEvent();
   }
 
   // 获取当前节点

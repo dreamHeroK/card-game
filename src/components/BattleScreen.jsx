@@ -157,6 +157,25 @@ export default function BattleScreen({ battle, onEndTurn, onPlayCard, onEndBattl
             {enemy.block > 0 && (
               <div className="enemy-block">格挡: {enemy.block}</div>
             )}
+            
+            {/* 敌人意图显示 */}
+            {battle.playerTurn && battle.getEnemyIntent && (() => {
+              const intent = battle.getEnemyIntent(enemy);
+              if (intent) {
+                return (
+                  <div 
+                    className="enemy-intent" 
+                    data-intent-type={intent.type}
+                    title={intent.description}
+                  >
+                    <span className="intent-icon">{intent.icon}</span>
+                    <span className="intent-text">{intent.text}</span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            
             <div className="enemy-buffs">
               {enemy.vulnerable > 0 && (
                 <div className="buff-icon vulnerable" title={`易伤: 受到的伤害+50% (${enemy.vulnerable}回合)`}>
@@ -217,6 +236,19 @@ export default function BattleScreen({ battle, onEndTurn, onPlayCard, onEndBattl
         )}
       </div>
 
+      {/* 战斗操作按钮 - 移动到手牌上方 */}
+      <div className="battle-actions">
+        <button onClick={handlePlayCard} disabled={selectedCard === null || !battle.playerTurn}>
+          打出卡牌
+        </button>
+        <button 
+          onClick={onEndTurn}
+          disabled={!battle.playerTurn}
+        >
+          结束回合
+        </button>
+      </div>
+
       <div className="hand-container">
         <div className="hand-label">手牌</div>
         <div className="hand">
@@ -245,18 +277,6 @@ export default function BattleScreen({ battle, onEndTurn, onPlayCard, onEndBattl
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="battle-actions">
-        <button onClick={handlePlayCard} disabled={selectedCard === null || !battle.playerTurn}>
-          打出卡牌
-        </button>
-        <button 
-          onClick={onEndTurn}
-          disabled={!battle.playerTurn}
-        >
-          结束回合
-        </button>
       </div>
 
       <div className="deck-info">

@@ -16,7 +16,7 @@ export class BattleSystem {
 
   // 初始化战斗
   initBattle() {
-    this.turn = 0;
+    this.turn = 1; // 从第1回合开始（第一回合是玩家回合）
     this.playerTurn = true;
     this.energy = this.maxEnergy;
     this.block = 0;
@@ -301,7 +301,7 @@ export class BattleSystem {
 
   // 敌人回合
   enemyTurn() {
-    // 敌人行动
+    // 敌人行动（使用当前turn）
     this.enemies.forEach(enemy => {
       if (enemy.hp > 0) {
         this.enemyAction(enemy);
@@ -314,9 +314,181 @@ export class BattleSystem {
       return battleState;
     }
     
+    // 回合数递增，进入下一个玩家回合
+    this.turn++;
+    
     // 玩家回合开始
     this.startPlayerTurn();
     return 'continue';
+  }
+
+  // 获取敌人当前回合的意图（用于显示，不执行）
+  // 在玩家回合显示的是下一个敌人回合的意图
+  getEnemyIntent(enemy) {
+    if (!enemy.intents || enemy.intents.length === 0) return null;
+    
+    // 计算下一个敌人回合的意图
+    // 如果当前是玩家回合，显示下一个敌人回合的意图
+    // 如果当前是敌人回合，显示当前敌人回合的意图
+    // turn从1开始：turn=1是第一个玩家回合，turn=2是第一个敌人回合
+    const enemyTurn = this.playerTurn ? this.turn + 1 : this.turn;
+    
+    // 使用turnPattern（回合模式）或默认循环
+    // 敌人回合从2开始（第一个敌人回合是2），所以用enemyTurn - 2来计算索引
+    let intentIndex;
+    if (enemy.turnPattern && enemy.turnPattern.length > 0) {
+      // 第一个敌人回合是turn=2，对应turnPattern[0]
+      // 所以用(enemyTurn - 2)来计算patternIndex
+      const patternIndex = (enemyTurn - 2) % enemy.turnPattern.length;
+      // 确保patternIndex非负
+      const safePatternIndex = patternIndex < 0 ? patternIndex + enemy.turnPattern.length : patternIndex;
+      intentIndex = enemy.turnPattern[safePatternIndex];
+    } else {
+      const safeIndex = (enemyTurn - 2) % enemy.intents.length;
+      intentIndex = safeIndex < 0 ? safeIndex + enemy.intents.length : safeIndex;
+    }
+    
+    // 确保intentIndex有效
+    if (intentIndex < 0 || intentIndex >= enemy.intents.length) {
+      intentIndex = 0; // 默认使用第一个意图
+    }
+    
+    const intent = enemy.intents[intentIndex];
+    if (!intent) return null;
+    
+    // 返回格式化的意图信息
+    return this.formatIntent(intent, enemy);
+  }
+  
+  // 格式化意图信息（用于UI显示）
+  formatIntent(intent, enemy) {
+    const baseValue = intent.value || 0;
+    const enemyStrength = enemy.strength || 0;
+    
+    // 根据意图类型格式化显示
+    switch (intent.type) {
+      // 攻击类意图
+      case 'attack':
+      case 'stab':
+      case 'chomp':
+      case 'thrash':
+      case 'rush':
+      case 'tackle':
+      case 'bite':
+      case 'flame_tackle':
+      case 'bolt':
+      case 'sear':
+      case 'skull_bash': {
+        const attackDamage = baseValue + enemyStrength;
+        return {
+          type: 'attack',
+          icon: '⚔️',
+          text: `攻击 ${attackDamage}`,
+          damage: attackDamage,
+          description: `造成${attackDamage}点伤害`
+        };
+      }
+      
+      // 强化类意图
+      case 'ritual':
+        return {
+          type: 'buff',
+          icon: '⬆️',
+          text: `强化 +${baseValue || 3}`,
+          value: baseValue || 3,
+          description: `获得${baseValue || 3}点力量`
+        };
+      case 'bellow':
+      case 'grow':
+        return {
+          type: 'buff',
+          icon: '⬆️',
+          text: '强化 +3',
+          value: 3,
+          description: '获得3点力量'
+        };
+      
+      // 状态类意图
+      case 'weak':
+      case 'lick':
+      case 'spit_web':
+      case 'beam':
+        return {
+          type: 'debuff',
+          icon: '⬇️',
+          text: '虚弱',
+          value: baseValue || 1,
+          description: `给予${baseValue || 1}层虚弱`
+        };
+      case 'vulnerable':
+        return {
+          type: 'debuff',
+          icon: '⬇️',
+          text: '易伤',
+          value: baseValue || 1,
+          description: `给予${baseValue || 1}层易伤`
+        };
+      case 'entangle':
+        return {
+          type: 'debuff',
+          icon: '🔒',
+          text: '缠绕',
+          description: '无法打出攻击牌'
+        };
+      
+      // 格挡类意图
+      case 'charge_up':
+      case 'defensive_mode':
+      case 'curl_up':
+        return {
+          type: 'block',
+          icon: '🛡️',
+          text: `格挡 ${baseValue || 15}`,
+          value: baseValue || 15,
+          description: `获得${baseValue || 15}点格挡`
+        };
+      
+      // 特殊意图
+      case 'sleep':
+        return {
+          type: 'special',
+          icon: '😴',
+          text: '睡觉',
+          description: '不行动，但获得力量'
+        };
+      case 'activate':
+        return {
+          type: 'special',
+          icon: '⚡',
+          text: '激活',
+          description: '激活状态'
+        };
+      case 'inferno': {
+        const infernoDamage = Math.floor(this.player.maxHp / 12);
+        return {
+          type: 'attack',
+          icon: '🔥',
+          text: `火焰 ${infernoDamage}`,
+          damage: infernoDamage,
+          description: `造成${infernoDamage}点火焰伤害`
+        };
+      }
+      case 'split':
+        return {
+          type: 'special',
+          icon: '💥',
+          text: '分裂',
+          description: '生命值低于50%时分裂'
+        };
+      
+      default:
+        return {
+          type: 'unknown',
+          icon: '❓',
+          text: '未知',
+          description: '未知意图'
+        };
+    }
   }
 
   // 敌人行动

@@ -5,6 +5,8 @@ import BattleScreen from './components/BattleScreen.jsx';
 import ShopScreen from './components/ShopScreen.jsx';
 import MapScreen from './components/MapScreen.jsx';
 import RestScreen from './components/RestScreen.jsx';
+import EventScreen from './components/EventScreen.jsx';
+import { getRandomMonster, MONSTER_TYPE } from './data/monsters.js';
 import './App.css';
 
 function App() {
@@ -122,7 +124,7 @@ function App() {
     switch (targetNode.type) {
       case 'monster':
       case 'elite':
-      case 'boss':
+      case 'boss': {
         // 使用目标节点的data
         const monster = targetNode.data?.monster;
         
@@ -139,6 +141,7 @@ function App() {
           updateGameState(state => state);
         }
         break;
+      }
       case 'shop':
         gameStateRef.current.enterShop();
         updateGameState(state => state);
@@ -147,7 +150,7 @@ function App() {
         gameStateRef.current.enterRest();
         updateGameState(state => state);
         break;
-      case 'treasure':
+      case 'treasure': {
         // 处理宝箱
         const relic = targetNode.data?.relic;
         if (relic) {
@@ -156,24 +159,33 @@ function App() {
           updateGameState(state => state);
         }
         break;
-      case 'event':
-        // 处理事件（简化，暂时当作普通战斗或显示事件界面）
-        const eventMonster = targetNode.data?.monster;
-        if (eventMonster) {
-          const enemy = {
-            ...eventMonster,
-            hp: eventMonster.maxHp,
-            block: 0,
-            vulnerable: 0,
-            weak: 0
-          };
-          gameStateRef.current.startBattle(enemy);
+      }
+      case 'event': {
+        // 处理事件
+        const eventData = targetNode.data?.event;
+        if (eventData) {
+          // 如果有事件数据，显示事件界面
+          gameStateRef.current.enterEvent(eventData);
           updateGameState(state => state);
         } else {
-          // 如果没有怪物，就只是标记为已访问
-          updateGameState(state => state);
+          // 如果没有事件数据，生成随机战斗
+          const randomMonster = getRandomMonster(MONSTER_TYPE.NORMAL, gameStateRef.current.act);
+          if (randomMonster) {
+            const enemy = {
+              ...randomMonster,
+              hp: randomMonster.maxHp,
+              block: 0,
+              vulnerable: 0,
+              weak: 0
+            };
+            gameStateRef.current.startBattle(enemy);
+            updateGameState(state => state);
+          } else {
+            updateGameState(state => state);
+          }
         }
         break;
+      }
       default:
         break;
     }
@@ -239,6 +251,58 @@ function App() {
   const handleLeaveRest = () => {
     if (!gameStateRef.current) return;
     gameStateRef.current.currentScreen = 'map';
+    updateGameState(state => state);
+  };
+  
+  // 处理事件选项选择
+  const handleEventOption = (option, result) => {
+    if (!gameStateRef.current) return;
+    
+    // 如果结果是战斗，开始战斗
+    if (result.battle) {
+      let enemy;
+      if (result.elite) {
+        // 精英战斗
+        const eliteMonster = getRandomMonster(MONSTER_TYPE.ELITE, gameStateRef.current.act);
+        enemy = {
+          ...eliteMonster,
+          hp: eliteMonster.maxHp,
+          block: 0,
+          vulnerable: 0,
+          weak: 0
+        };
+      } else {
+        // 普通战斗
+        const randomMonster = getRandomMonster(MONSTER_TYPE.NORMAL, gameStateRef.current.act);
+        enemy = {
+          ...randomMonster,
+          hp: randomMonster.maxHp,
+          block: 0,
+          vulnerable: 0,
+          weak: 0
+        };
+      }
+      gameStateRef.current.startBattle(enemy);
+      updateGameState(state => state);
+    } else if (result.upgrade) {
+      // 升级卡牌（暂时返回地图，后续可以添加升级界面）
+      gameStateRef.current.leaveEvent();
+      updateGameState(state => state);
+    } else if (result.chooseCard) {
+      // 选择卡牌（暂时返回地图，后续可以添加选卡界面）
+      gameStateRef.current.leaveEvent();
+      updateGameState(state => state);
+    } else {
+      // 普通事件，关闭事件界面
+      gameStateRef.current.leaveEvent();
+      updateGameState(state => state);
+    }
+  };
+  
+  // 处理离开事件
+  const handleLeaveEvent = () => {
+    if (!gameStateRef.current) return;
+    gameStateRef.current.leaveEvent();
     updateGameState(state => state);
   };
 
@@ -331,6 +395,15 @@ function App() {
           map={gameStateRef.current.map}
           player={gameStateRef.current}
           onNodeClick={handleNodeClick}
+        />
+      )}
+      
+      {currentScreen === 'event' && gameStateRef.current?.currentEvent && (
+        <EventScreen
+          event={gameStateRef.current.currentEvent}
+          player={gameStateRef.current}
+          onOptionSelect={handleEventOption}
+          onLeave={handleLeaveEvent}
         />
       )}
     </div>

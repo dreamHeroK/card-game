@@ -25,6 +25,7 @@ export class GameState {
     this.map = new MapSystem(this.act);
     this.battle = null;
     this.shop = null;
+    this.currentEvent = null;
     this.currentScreen = 'map'; // map, battle, shop, rest, event, treasure
   }
   
@@ -148,6 +149,18 @@ export class GameState {
   // 进入休息处
   enterRest() {
     this.currentScreen = 'rest';
+  }
+  
+  // 进入事件
+  enterEvent(event) {
+    this.currentEvent = event;
+    this.currentScreen = 'event';
+  }
+  
+  // 离开事件
+  leaveEvent() {
+    this.currentEvent = null;
+    this.currentScreen = 'map';
   }
 
   // 休息
