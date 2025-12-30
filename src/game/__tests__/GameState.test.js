@@ -46,8 +46,21 @@ describe('GameState', () => {
     gameState.startBattle(monster);
     const initialGold = gameState.gold;
     
+    // 需要先移动到节点才能生成奖励
+    const nodes = gameState.map.nodes.filter(n => n.floor === 0);
+    if (nodes.length > 0) {
+      gameState.map.moveToNode(nodes[0].id);
+    }
+    
     gameState.endBattle(true);
 
+    // 胜利时显示奖励界面，battle暂时保留
+    expect(gameState.battleReward).toBeDefined();
+    expect(gameState.currentScreen).toBe('battle_reward');
+    expect(gameState.battleReward.gold).toBeGreaterThan(0);
+    
+    // 接受奖励后清除
+    gameState.acceptBattleReward(null, true, true);
     expect(gameState.battle).toBeNull();
     expect(gameState.currentScreen).toBe('map');
     expect(gameState.gold).toBeGreaterThan(initialGold);

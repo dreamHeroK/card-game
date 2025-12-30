@@ -1,0 +1,209 @@
+.battle-reward-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.reward-container {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 3px solid #4ecdc4;
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: white;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.reward-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #4ecdc4;
+  text-align: center;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+}
+
+.reward-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.reward-label {
+  font-size: 18px;
+  font-weight: bold;
+  color: #4ecdc4;
+  margin-bottom: 15px;
+}
+
+.reward-gold {
+  font-size: 24px;
+  color: #ffd93d;
+  font-weight: bold;
+  text-align: center;
+}
+
+.card-choices {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.card-choice {
+  min-width: 200px;
+  width: 200px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 3px solid transparent;
+  border-radius: 10px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.card-choice:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.card-choice.selected {
+  border-color: #4ecdc4;
+  box-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
+}
+
+.card-image-container {
+  width: 100%;
+  height: 150px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-name {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 6px;
+  text-align: center;
+  width: 100%;
+}
+
+.card-cost {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #ff6b6b;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.card-description {
+  font-size: 12px;
+  margin-top: 6px;
+  opacity: 0.9;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.card-damage {
+  color: #ff6b6b;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.card-block {
+  color: #4ecdc4;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.skip-card {
+  width: 100%;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 16px;
+}
+
+.skip-card:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.relic-reward,
+.potion-reward {
+  background: rgba(78, 205, 196, 0.2);
+  border: 2px solid #4ecdc4;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+
+.relic-name,
+.potion-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #4ecdc4;
+  margin-bottom: 8px;
+}
+
+.relic-description,
+.potion-description {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.accept-reward {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  background: #4ecdc4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+.accept-reward:hover {
+  background: #45b8b0;
+  transform: scale(1.05);
+}
+

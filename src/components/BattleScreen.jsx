@@ -3,10 +3,13 @@ import { getMonsterImage, getCardImage } from '../utils/imageLoader.js';
 // import { getCachedMoegirlImageUrl } from '../utils/imageApi.js'; // 可选：使用API获取图片
 import './BattleScreen.css';
 
-export default function BattleScreen({ battle, onEndTurn, onPlayCard, onEndBattle }) {
+export default function BattleScreen({ battle, player, onEndTurn, onPlayCard, onEndBattle, onUsePotion }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [selectedTarget, setSelectedTarget] = useState(0);
   const [damageNumbers, setDamageNumbers] = useState([]); // 伤害数字显示
+  const [showDrawPile, setShowDrawPile] = useState(false);
+  const [showDiscardPile, setShowDiscardPile] = useState(false);
+  const [showExhaustPile, setShowExhaustPile] = useState(false);
 
   if (!battle) return null;
 
@@ -110,8 +113,34 @@ export default function BattleScreen({ battle, onEndTurn, onPlayCard, onEndBattl
     }
   }, [battle?.player?.hp, battle?.enemies?.map(e => e.hp).join(','), onEndBattle]);
 
+  const handlePotionClick = (potionIndex) => {
+    if (onUsePotion) {
+      onUsePotion(potionIndex);
+    }
+  };
+
   return (
     <div className="battle-screen">
+      {/* 药水栏 - 顶部 */}
+      {player && player.potions && player.potions.length > 0 && (
+        <div className="potions-bar">
+          <div className="potions-label">药水</div>
+          <div className="potions-container">
+            {player.potions.map((potion, index) => (
+              <div
+                key={index}
+                className="potion-item"
+                onClick={() => handlePotionClick(index)}
+                title={potion.description}
+              >
+                <div className="potion-icon">🧪</div>
+                <div className="potion-name">{potion.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="battle-header">
         <div className="player-stats">
           <div className="stat">
@@ -133,6 +162,74 @@ export default function BattleScreen({ battle, onEndTurn, onPlayCard, onEndBattl
             </div>
           )}
         </div>
+      </div>
+
+      {/* 左侧抽牌堆 */}
+      <div className="deck-pile-left">
+        <div 
+          className="pile-button draw-pile"
+          onClick={() => setShowDrawPile(!showDrawPile)}
+          title="点击查看抽牌堆"
+        >
+          <div className="pile-label">抽牌堆</div>
+          <div className="pile-count">{battle.drawPile.length}</div>
+        </div>
+        {showDrawPile && (
+          <div className="pile-cards">
+            {battle.drawPile.map((card, index) => (
+              <div key={index} className="pile-card">
+                <div className="card-name">{card.name}</div>
+                <div className="card-cost">{card.cost || 0}</div>
+                <div className="card-description">{card.description}</div>
+              </div>
+            ))}
+            <button className="close-pile" onClick={() => setShowDrawPile(false)}>关闭</button>
+          </div>
+        )}
+      </div>
+
+      {/* 右侧弃牌堆和消耗堆 */}
+      <div className="deck-pile-right">
+        <div 
+          className="pile-button discard-pile"
+          onClick={() => setShowDiscardPile(!showDiscardPile)}
+          title="点击查看弃牌堆"
+        >
+          <div className="pile-label">弃牌堆</div>
+          <div className="pile-count">{battle.discardPile.length}</div>
+        </div>
+        {showDiscardPile && (
+          <div className="pile-cards">
+            {battle.discardPile.map((card, index) => (
+              <div key={index} className="pile-card">
+                <div className="card-name">{card.name}</div>
+                <div className="card-cost">{card.cost || 0}</div>
+                <div className="card-description">{card.description}</div>
+              </div>
+            ))}
+            <button className="close-pile" onClick={() => setShowDiscardPile(false)}>关闭</button>
+          </div>
+        )}
+        <div 
+          className="pile-button exhaust-pile"
+          onClick={() => setShowExhaustPile(!showExhaustPile)}
+          title="点击查看消耗堆"
+        >
+          <div className="pile-label">消耗堆</div>
+          <div className="pile-count">{battle.exhaustPile.length}</div>
+        </div>
+        {showExhaustPile && (
+          <div className="pile-cards">
+            {battle.exhaustPile.map((card, index) => (
+              <div key={index} className="pile-card">
+                <div className="card-name">{card.name}</div>
+                <div className="card-cost">{card.cost || 0}</div>
+                <div className="card-description">{card.description}</div>
+              </div>
+            ))}
+            <button className="close-pile" onClick={() => setShowExhaustPile(false)}>关闭</button>
+          </div>
+        )}
       </div>
 
       <div className="enemies-container">
@@ -279,11 +376,6 @@ export default function BattleScreen({ battle, onEndTurn, onPlayCard, onEndBattl
         </div>
       </div>
 
-      <div className="deck-info">
-        <div>抽牌堆: {battle.drawPile.length}</div>
-        <div>弃牌堆: {battle.discardPile.length}</div>
-        <div>消耗堆: {battle.exhaustPile.length}</div>
-      </div>
     </div>
   );
 }

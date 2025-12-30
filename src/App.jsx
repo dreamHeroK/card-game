@@ -6,6 +6,7 @@ import ShopScreen from './components/ShopScreen.jsx';
 import MapScreen from './components/MapScreen.jsx';
 import RestScreen from './components/RestScreen.jsx';
 import EventScreen from './components/EventScreen.jsx';
+import BattleRewardScreen from './components/BattleRewardScreen.jsx';
 import { getRandomMonster, MONSTER_TYPE } from './data/monsters.js';
 import './App.css';
 
@@ -80,6 +81,28 @@ function App() {
     
     // 触发更新
     updateGameState(state => state);
+  };
+
+  // 处理使用药水
+  const handleUsePotion = (potionIndex) => {
+    if (!gameStateRef.current || !gameStateRef.current.battle) return;
+    if (potionIndex < 0 || potionIndex >= gameStateRef.current.potions.length) return;
+    
+    const potion = gameStateRef.current.potions[potionIndex];
+    if (!potion || !potion.effect) return;
+    
+    const result = potion.effect(gameStateRef.current, gameStateRef.current.battle);
+    
+    // 移除使用的药水
+    gameStateRef.current.potions.splice(potionIndex, 1);
+    
+    // 触发更新
+    updateGameState(state => state);
+    
+    // 可以显示消息
+    if (result && result.message) {
+      console.log(result.message);
+    }
   };
 
   // 处理节点点击
@@ -363,9 +386,11 @@ function App() {
       {currentScreen === 'battle' && battle && (
         <BattleScreen
           battle={battle}
+          player={gameStateRef.current || gameState}
           onPlayCard={handlePlayCard}
           onEndTurn={handleEndTurn}
           onEndBattle={handleEndBattle}
+          onUsePotion={handleUsePotion}
         />
       )}
       
@@ -404,6 +429,18 @@ function App() {
           player={gameStateRef.current}
           onOptionSelect={handleEventOption}
           onLeave={handleLeaveEvent}
+        />
+      )}
+      
+      {currentScreen === 'battle_reward' && gameStateRef.current?.battleReward && (
+        <BattleRewardScreen
+          reward={gameStateRef.current.battleReward}
+          onAccept={(selectedCardIndex, acceptRelic, acceptPotion) => {
+            if (gameStateRef.current) {
+              gameStateRef.current.acceptBattleReward(selectedCardIndex, acceptRelic, acceptPotion);
+              updateGameState(state => state);
+            }
+          }}
         />
       )}
     </div>

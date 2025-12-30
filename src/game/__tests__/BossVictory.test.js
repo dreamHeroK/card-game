@@ -57,7 +57,12 @@ describe('Boss Victory and Next Act', () => {
     // 结束战斗（胜利）
     gameState.endBattle(true);
     
-    // 应该返回地图
+    // 现在会显示奖励界面
+    expect(gameState.currentScreen).toBe('battle_reward');
+    expect(gameState.battleReward).toBeDefined();
+    
+    // 接受奖励后返回地图并进入下一层
+    gameState.acceptBattleReward(null, true, true);
     expect(gameState.currentScreen).toBe('map');
     
     // 检查是否进入下一层（act 1应该进入act 2）
@@ -94,7 +99,12 @@ describe('Boss Victory and Next Act', () => {
     gameState.battle.enemies[0].hp = 0;
     gameState.endBattle(true);
     
-    // 检查是否进入下一层
+    // 现在会显示奖励界面
+    expect(gameState.currentScreen).toBe('battle_reward');
+    expect(gameState.battleReward).toBeDefined();
+    
+    // 接受奖励
+    gameState.acceptBattleReward(null, true, true);
     expect(gameState.currentScreen).toBe('map');
     
     // act应该增加（如果act < 3）
@@ -137,7 +147,12 @@ describe('Boss Victory and Next Act', () => {
     gameState.battle.enemies[0].hp = 0;
     gameState.endBattle(true);
     
-    // 应该返回地图
+    // 现在会显示奖励界面
+    expect(gameState.currentScreen).toBe('battle_reward');
+    expect(gameState.battleReward).toBeDefined();
+    
+    // 接受奖励后返回地图
+    gameState.acceptBattleReward(null, true, true);
     expect(gameState.currentScreen).toBe('map');
     
     // act不应该增加（已经是最后一层）
