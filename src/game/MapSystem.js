@@ -1,7 +1,8 @@
 import { ENCOUNTER_TABLE } from '../data/monsters.js'
 import { NODE_TYPES } from '../types/index.js'
+import { EVENT_DATA } from '../data/events.js'
 
-const EVENT_IDS = ['DEAD_ADVENTURER', 'ANCIENT_WRITING', 'LIARS_GAME']
+const EVENT_IDS = Object.keys(EVENT_DATA)
 
 function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)]
@@ -36,8 +37,8 @@ function pickNodeType(col) {
 
 function getEnemyIdsForNode(type) {
   if (type === NODE_TYPES.BATTLE) return pickRandom(ENCOUNTER_TABLE.NORMAL)
-  if (type === NODE_TYPES.ELITE) return ENCOUNTER_TABLE.ELITE[0]
-  if (type === NODE_TYPES.BOSS) return ENCOUNTER_TABLE.BOSS[0]
+  if (type === NODE_TYPES.ELITE) return pickRandom(ENCOUNTER_TABLE.ELITE)
+  if (type === NODE_TYPES.BOSS) return pickRandom(ENCOUNTER_TABLE.BOSS)
   return undefined
 }
 

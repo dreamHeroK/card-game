@@ -599,7 +599,8 @@ export function resolveEnemyTurn(state) {
   enemies = enemies.map(enemy => {
     if (enemy.hp <= 0) return enemy
 
-    let e = { ...enemy }
+    // Clear block at the start of enemy's turn (mirrors STS: block resets each round)
+    let e = { ...enemy, block: 0 }
 
     // === atStartOfTurn() triggers - before duration decrement ===
     // RITUAL: gain strength each turn
@@ -662,6 +663,10 @@ export function resolveEnemyTurn(state) {
         player = applyEffectToEntity(player, STATUS.WEAK, move.debuffAmount || 1)
       } else if (move.debuffId === 'VULNERABLE') {
         player = applyEffectToEntity(player, STATUS.VULNERABLE, move.debuffAmount || 1)
+      } else if (move.debuffId === 'FRAIL') {
+        player = applyEffectToEntity(player, STATUS.FRAIL, move.debuffAmount || 1)
+      } else if (move.debuffId === 'POISON') {
+        player = applyEffectToEntity(player, STATUS.POISON, move.debuffAmount || 1)
       }
       log = [...log, `${e.name} 对你施加了减益`]
     }
@@ -673,7 +678,7 @@ export function resolveEnemyTurn(state) {
 
     let nextMoveIndex = e.moveIndex + 1
     const nextIntent = getEnemyIntent(e.id, nextMoveIndex, battle.turnNumber)
-    e = { ...e, moveIndex: nextMoveIndex, intent: nextIntent, block: 0 }
+    e = { ...e, moveIndex: nextMoveIndex, intent: nextIntent }
 
     return e
   })
