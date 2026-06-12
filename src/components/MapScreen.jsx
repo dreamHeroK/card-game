@@ -1,5 +1,6 @@
 import './MapScreen.css'
-import { getNodeImage, getRelicImage } from '../utils/imageLoader.js'
+import { getNodeImage } from '../utils/imageLoader.js'
+import RelicIcon from './RelicIcon.jsx'
 
 const NODE_LABELS = {
   BATTLE: '战斗', ELITE: '精英', REST: '篝火', SHOP: '商店',
@@ -35,14 +36,7 @@ export default function MapScreen({ state, dispatch }) {
         <div className="map-header-center">
           <div className="relic-row">
             {player.relics.map(relicId => (
-              <img
-                key={relicId}
-                className="relic-icon"
-                src={getRelicImage(relicId)}
-                alt={relicId}
-                title={relicId}
-                onError={e => { e.target.style.display = 'none' }}
-              />
+              <RelicIcon key={relicId} relicId={relicId} size={36} />
             ))}
           </div>
         </div>

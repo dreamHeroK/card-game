@@ -1,0 +1,117 @@
+/* ── Wrapper ─────────────────────────────────────────────── */
+.relic-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Icon ────────────────────────────────────────────────── */
+.relic-icon {
+  object-fit: contain;
+  cursor: default;
+  transition: transform 0.15s, filter 0.15s;
+}
+
+.relic-icon-wrap:hover .relic-icon {
+  transform: scale(1.28);
+  filter: drop-shadow(0 0 7px rgba(244, 200, 50, 0.75));
+}
+
+/* ── Tooltip ─────────────────────────────────────────────── */
+.relic-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+
+  min-width: 200px;
+  max-width: 260px;
+  width: max-content;
+
+  background: linear-gradient(160deg, #140e00 0%, #0a0800 100%);
+  border: 1px solid rgba(244, 185, 40, 0.45);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s, transform 0.12s;
+  transform: translateX(-50%) translateY(4px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.8);
+
+  /* small upward-pointing arrow */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(244, 185, 40, 0.45);
+  }
+}
+
+/* Flip below icon when near top of screen */
+.relic-tooltip-below {
+  bottom: auto;
+  top: calc(100% + 10px);
+  transform: translateX(-50%) translateY(-4px);
+
+  &::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: rgba(244, 185, 40, 0.45);
+  }
+}
+
+.relic-icon-wrap:hover .relic-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.relic-icon-wrap:hover .relic-tooltip-below {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Tooltip internals ───────────────────────────────────── */
+.rt-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rt-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.rt-name {
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.rt-rarity {
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-top: 3px;
+}
+
+.rt-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rt-desc {
+  font-size: 13px;
+  color: #c8b880;
+  line-height: 1.55;
+}

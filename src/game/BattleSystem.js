@@ -137,7 +137,7 @@ export function initBattle(player, enemyMonsterIds, combatType) {
   const enemies = enemyMonsterIds.map(id => createEnemyInstance(id)).filter(Boolean)
 
   return {
-    player: { ...player, block: 0 },
+    player: { ...player, block: 0, effects: {} },
     battle: {
       enemies,
       hand,
