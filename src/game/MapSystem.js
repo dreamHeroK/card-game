@@ -1,327 +1,151 @@
-// 地图系统
-import { NODE_TYPE } from '../types/index.js';
-import { getRandomMonster, MONSTER_TYPE } from '../data/monsters.js';
-import { getRandomEvent } from '../data/events.js';
-import { getRandomRelic } from '../data/relics.js';
+import { ENCOUNTER_TABLE } from '../data/monsters.js'
+import { NODE_TYPES } from '../types/index.js'
 
-export class MapSystem {
-  constructor(act = 1) {
-    this.act = act;
-    this.maxFloor = 15;
-    this.nodes = [];
-    this.connections = [];
-    this.currentNodeId = null;
-    this.generateMap();
+const EVENT_IDS = ['DEAD_ADVENTURER', 'ANCIENT_WRITING', 'LIARS_GAME']
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+// STS2 map constants
+const BOSS_COL = 11
+const ANCHOR_COLS = [0, 4, 8, 11]
+const ANCHOR_COL_SET = new Set(ANCHOR_COLS)
+const ANCHOR_TYPES = {
+  0: NODE_TYPES.BATTLE,
+  4: NODE_TYPES.ELITE,
+  8: NODE_TYPES.SHOP,
+  11: NODE_TYPES.BOSS,
+}
+
+export const MAP_WIDTH = 1580
+export const MAP_HEIGHT = 700
+const COL_SPACING = 132
+const X_OFFSET = 50
+
+function pickNodeType(col) {
+  if (ANCHOR_COL_SET.has(col)) return ANCHOR_TYPES[col]
+  const roll = Math.random()
+  if (roll < 0.42) return NODE_TYPES.BATTLE
+  if (roll < 0.58) return NODE_TYPES.ELITE
+  if (roll < 0.70) return NODE_TYPES.REST
+  if (roll < 0.80) return NODE_TYPES.SHOP
+  if (roll < 0.92) return NODE_TYPES.EVENT
+  return NODE_TYPES.TREASURE
+}
+
+function getEnemyIdsForNode(type) {
+  if (type === NODE_TYPES.BATTLE) return pickRandom(ENCOUNTER_TABLE.NORMAL)
+  if (type === NODE_TYPES.ELITE) return ENCOUNTER_TABLE.ELITE[0]
+  if (type === NODE_TYPES.BOSS) return ENCOUNTER_TABLE.BOSS[0]
+  return undefined
+}
+
+export function generateMap(act = 1) {
+  const nodes = []
+  const paths = []
+  const colNodes = []
+
+  // Step 1: Generate nodes for each column
+  for (let col = 0; col <= BOSS_COL; col++) {
+    const isAnchor = ANCHOR_COL_SET.has(col)
+    const rowCount = isAnchor ? 1 : 2 + Math.floor(Math.random() * 3) // 2–4
+
+    const colArr = []
+    for (let row = 0; row < rowCount; row++) {
+      const type = pickNodeType(col)
+      const id = `n_${col}_${row}`
+      const xJitter = isAnchor ? 0 : Math.round((Math.random() - 0.5) * 14)
+      const x = col * COL_SPACING + X_OFFSET + xJitter
+
+      const usableH = MAP_HEIGHT - 130
+      const yJitter = rowCount === 1 ? 0 : Math.round((Math.random() - 0.5) * 14)
+      const y = rowCount === 1
+        ? Math.round(MAP_HEIGHT / 2 - 26)
+        : Math.round(65 + (row / (rowCount - 1)) * usableH + yJitter)
+
+      nodes.push({
+        id, type, col, row,
+        x: Math.round(x), y,
+        isAnchor,
+        visited: false,
+        available: col === 0,
+        enemyIds: getEnemyIdsForNode(type),
+        eventId: type === NODE_TYPES.EVENT ? pickRandom(EVENT_IDS) : undefined,
+      })
+      colArr.push(id)
+    }
+    colNodes.push(colArr)
   }
 
-  // 生成地图
-  generateMap() {
-    this.nodes = [];
-    this.connections = [];
-    
-    // 创建4个起始节点（第0层），都是战斗类型
-    const startNodes = [];
-    for (let i = 0; i < 4; i++) {
-      const startNode = this.createNode(0, NODE_TYPE.MONSTER, this.act);
-      startNodes.push(startNode);
-      this.nodes.push(startNode);
-    }
-    // 不设置当前节点，让玩家选择起始节点
-    this.currentNodeId = null;
-    
-    // 第一层：创建4个节点，形成4条路径的起点
-    const firstFloorNodes = [];
-    for (let i = 0; i < 4; i++) {
-      const nodeType = this.getNodeTypeForFloor();
-      const node = this.createNode(1, nodeType, this.act);
-      firstFloorNodes.push(node);
-      this.nodes.push(node);
-      // 每个节点都连接到对应的起始节点（形成4条独立路径）
-      this.connections.push({ from: startNodes[i].id, to: node.id });
-    }
-    
-    // 收集所有中间层的节点位置（用于精英节点分配）
-    const allMiddleFloorPositions = [];
-    for (let floor = 2; floor < this.maxFloor - 2; floor++) {
-      const nodeCount = this.getNodeCountForFloor(floor);
-      for (let i = 0; i < nodeCount; i++) {
-        allMiddleFloorPositions.push({ floor, index: i });
+  // Step 2: Connect nodes with distance-based rules
+  const pathSet = new Set()
+  function addPath(from, to) {
+    const key = `${from}->${to}`
+    if (pathSet.has(key)) return
+    pathSet.add(key)
+    paths.push({ from, to })
+  }
+
+  for (let col = 0; col < BOSS_COL; col++) {
+    const fromCol = colNodes[col]
+    const toCol = colNodes[col + 1]
+
+    // Primary: proportional mapping from source row to dest row
+    fromCol.forEach((fromId, fi) => {
+      const ratio = fromCol.length === 1 ? 0.5 : fi / (fromCol.length - 1)
+      const toIndex = Math.round(ratio * (toCol.length - 1))
+      addPath(fromId, toCol[toIndex])
+
+      // Secondary branch: adjacent dest node (55% chance)
+      if (Math.random() < 0.55 && toCol.length > 1) {
+        const goUp = toIndex > 0 && (toIndex === toCol.length - 1 || Math.random() < 0.5)
+        const altIndex = goUp ? toIndex - 1 : Math.min(toIndex + 1, toCol.length - 1)
+        addPath(fromId, toCol[altIndex])
       }
-    }
-    
-    // 随机选择至少2个精英节点位置（确保至少有2次精英战斗）
-    const eliteCount = Math.max(2, Math.min(3, Math.floor(allMiddleFloorPositions.length * 0.15)));
-    const elitePositions = [];
-    const shuffledPositions = [...allMiddleFloorPositions].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < eliteCount; i++) {
-      if (shuffledPositions.length > 0) {
-        elitePositions.push(shuffledPositions.pop());
+    })
+
+    // Ensure every dest node has at least one incoming connection
+    toCol.forEach(toId => {
+      if (!paths.some(p => p.to === toId)) {
+        addPath(pickRandom(fromCol), toId)
       }
-    }
-    
-    // 生成中间层（2到maxFloor-2）
-    // 每层保持4条路径，但允许路径合并和交叉
-    let previousFloorNodes = firstFloorNodes;
-    
-    for (let floor = 2; floor < this.maxFloor - 2; floor++) {
-      const nodeCount = this.getNodeCountForFloor(floor);
-      const floorNodes = [];
-      
-      for (let i = 0; i < nodeCount; i++) {
-        // 检查当前位置是否被分配为精英
-        const isElite = elitePositions.some(pos => pos.floor === floor && pos.index === i);
-        const nodeType = isElite 
-          ? NODE_TYPE.ELITE 
-          : this.getNodeTypeForFloor(floor);
-        const node = this.createNode(floor, nodeType, this.act);
-        floorNodes.push(node);
-        this.nodes.push(node);
-      }
-      
-      // 连接到上一层：确保每个节点至少连接到一个上层节点
-      // 允许交叉连接（一个节点可以连接到多个上层节点）
-      floorNodes.forEach(node => {
-        // 每个节点连接到1-3个上层节点（允许路径合并）
-        const connectionCount = Math.min(3, previousFloorNodes.length);
-        const connectedNodes = new Set();
-        
-        for (let j = 0; j < connectionCount; j++) {
-          const prevNode = previousFloorNodes[Math.floor(Math.random() * previousFloorNodes.length)];
-          if (!connectedNodes.has(prevNode.id)) {
-            connectedNodes.add(prevNode.id);
-            if (!this.connections.some(c => c.from === prevNode.id && c.to === node.id)) {
-              this.connections.push({ from: prevNode.id, to: node.id });
-            }
-          }
+    })
+
+    // Skip connection to col+2 (20% chance, skip over non-anchor cols only)
+    if (col + 2 <= BOSS_COL && !ANCHOR_COL_SET.has(col + 2)) {
+      fromCol.forEach(fromId => {
+        if (Math.random() < 0.20) {
+          addPath(fromId, pickRandom(colNodes[col + 2]))
         }
-      });
-      
-      previousFloorNodes = floorNodes;
-    }
-    
-    // 创建休息节点（maxFloor-2层）
-    const restNode = this.createNode(this.maxFloor - 2, NODE_TYPE.REST, this.act);
-    this.nodes.push(restNode);
-    
-    // 连接到休息节点：所有上一层的节点都连接到休息节点
-    previousFloorNodes.forEach(prevNode => {
-      this.connections.push({ from: prevNode.id, to: restNode.id });
-    });
-    
-    // 创建Boss节点（最后一层）
-    const bossNode = this.createNode(this.maxFloor - 1, NODE_TYPE.BOSS, this.act);
-    this.nodes.push(bossNode);
-    this.connections.push({ from: restNode.id, to: bossNode.id });
-  }
-
-  // 获取每层节点数量
-  getNodeCountForFloor(floor) {
-    // 确保有足够的节点来支持4条路径，同时允许路径合并和交叉
-    if (floor === 1) return 4; // 第一层固定4个节点
-    if (floor <= 3) return 4; // 保持4条路径
-    if (floor <= 6) return 4; // 保持4条路径，允许交叉
-    if (floor <= 9) return 3; // 路径开始合并
-    return 3; // 继续合并
-  }
-  
-  // 获取所有连接
-  getConnections() {
-    return this.connections;
-  }
-
-  // 获取节点类型（排除已分配的精英节点）
-  getNodeTypeForFloor() {
-    const rand = Math.random();
-    
-    // 调整比例：事件和战斗比例一致（各约45%），其他类型各约5%
-    // 事件：45%（与战斗事件比例一致）
-    if (rand < 0.45) return NODE_TYPE.EVENT;
-    // 普通战斗：45%（与事件比例一致）
-    if (rand < 0.9) return NODE_TYPE.MONSTER;
-    // 商店：5%
-    if (rand < 0.95) return NODE_TYPE.SHOP;
-    // 宝箱：5%
-    return NODE_TYPE.TREASURE;
-  }
-
-  // 创建节点
-  createNode(floor, type, act) {
-    const id = `node_${floor}_${Date.now()}_${Math.random()}`;
-    return {
-      id,
-      floor,
-      type,
-      visited: false,
-      data: this.generateNodeData(type, act)
-    };
-  }
-
-  // 生成节点数据
-  generateNodeData(type, act) {
-    switch (type) {
-      case NODE_TYPE.MONSTER: {
-        const normalMonster = getRandomMonster(MONSTER_TYPE.NORMAL, act);
-        if (!normalMonster) {
-          return {
-            monster: {
-              id: 'cultist',
-              name: '邪教徒',
-              type: MONSTER_TYPE.NORMAL,
-              act: 1,
-              maxHp: 48,
-              intents: [{ type: 'attack', value: 6 }],
-              description: '默认怪物'
-            }
-          };
-        }
-        return {
-          monster: { ...normalMonster }
-        };
-      }
-      case NODE_TYPE.ELITE: {
-        const eliteMonster = getRandomMonster(MONSTER_TYPE.ELITE, act);
-        if (!eliteMonster) {
-          return {
-            monster: {
-              id: 'gremlin_nob',
-              name: '地精大块头',
-              type: MONSTER_TYPE.ELITE,
-              act: 1,
-              maxHp: 82,
-              intents: [{ type: 'attack', value: 14 }],
-              description: '默认精英'
-            }
-          };
-        }
-        return {
-          monster: { ...eliteMonster }
-        };
-      }
-      case NODE_TYPE.BOSS: {
-        const bossMonster = getRandomMonster(MONSTER_TYPE.BOSS, act);
-        if (!bossMonster) {
-          return {
-            monster: {
-              id: 'slime_boss',
-              name: '史莱姆Boss',
-              type: MONSTER_TYPE.BOSS,
-              act: 1,
-              maxHp: 140,
-              intents: [{ type: 'attack', value: 18 }],
-              description: '默认Boss'
-            }
-          };
-        }
-        return {
-          monster: { ...bossMonster }
-        };
-      }
-      case NODE_TYPE.REST:
-        return {
-          options: ['rest', 'upgrade', 'smith']
-        };
-      case NODE_TYPE.SHOP:
-        return {
-          shop: true
-        };
-      case NODE_TYPE.TREASURE:
-        return {
-          relic: this.generateTreasureRelic()
-        };
-      case NODE_TYPE.EVENT:
-        return {
-          event: this.generateRandomEvent()
-        };
-      default:
-        return {};
+      })
     }
   }
 
-  // 生成宝箱遗物
-  generateTreasureRelic() {
-    return getRandomRelic() || {
-      id: 'test_relic',
-      name: '测试遗物',
-      rarity: 'common',
-      description: '测试用遗物'
-    };
-  }
-  
-  // 生成随机事件
-  generateRandomEvent() {
-    return getRandomEvent();
-  }
-
-  // 获取当前节点
-  getCurrentNode() {
-    return this.nodes.find(n => n.id === this.currentNodeId);
-  }
-
-  // 获取节点
-  getNode(nodeId) {
-    return this.nodes.find(n => n.id === nodeId);
-  }
-
-  // 检查节点是否可访问
-  isNodeAccessible(nodeId) {
-    if (!this.currentNodeId) {
-      // 如果没有当前节点，第一层的节点都可以访问
-      const node = this.nodes.find(n => n.id === nodeId);
-      return node && node.floor === 0;
-    }
-    
-    const currentNode = this.getCurrentNode();
-    const targetNode = this.nodes.find(n => n.id === nodeId);
-    
-    if (!currentNode || !targetNode) return false;
-    
-    // 当前节点总是可访问（可以点击当前节点触发事件）
-    if (currentNode.id === nodeId) return true;
-    
-    // 检查是否有连接（从当前节点到目标节点）
-    return this.connections.some(
-      conn => conn.from === this.currentNodeId && conn.to === nodeId
-    );
-  }
-
-  // 移动到节点
-  moveToNode(nodeId) {
-    if (!this.isNodeAccessible(nodeId)) return null;
-    
-    this.currentNodeId = nodeId;
-    return this.getCurrentNode();
-  }
-
-  // 标记节点为已访问
-  visitNode(nodeId) {
-    const node = this.nodes.find(n => n.id === nodeId);
-    if (node) {
-      node.visited = true;
-    }
-  }
-
-  // 获取可访问的下一层节点
-  getAvailableNextNodes() {
-    if (!this.currentNodeId) {
-      return this.nodes.filter(n => n.floor === 0);
-    }
-    
-    return this.connections
-      .filter(conn => conn.from === this.currentNodeId)
-      .map(conn => this.nodes.find(n => n.id === conn.to))
-      .filter(n => n && !n.visited);
-  }
-
-  // 按层获取节点
-  getNodesByFloor() {
-    const grouped = {};
-    this.nodes.forEach(node => {
-      if (!grouped[node.floor]) {
-        grouped[node.floor] = [];
-      }
-      grouped[node.floor].push(node);
-    });
-    return grouped;
+  return {
+    nodes,
+    paths,
+    currentNodeId: null,
+    availableNodeIds: colNodes[0],
+    anchorCols: ANCHOR_COLS,
+    mapWidth: MAP_WIDTH,
+    mapHeight: MAP_HEIGHT,
   }
 }
 
+export function advanceMap(map, visitedNodeId) {
+  if (!visitedNodeId) return map
+  const newNodes = map.nodes.map(n =>
+    n.id === visitedNodeId ? { ...n, visited: true } : n
+  )
+  const nextIds = map.paths.filter(p => p.from === visitedNodeId).map(p => p.to)
+  const updatedNodes = newNodes.map(n =>
+    nextIds.includes(n.id) ? { ...n, available: true } : n
+  )
+  return {
+    ...map,
+    nodes: updatedNodes,
+    currentNodeId: visitedNodeId,
+    availableNodeIds: nextIds,
+  }
+}

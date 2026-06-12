@@ -1,0 +1,42 @@
+﻿[
+    {
+        "id":  "TRI_BOOMERANG",
+        "name":  "三刃回旋镖",
+        "description":  "从你的[gold]牌组[/gold]中选择[blue]3[/blue]张攻击牌。为这些牌[gold]附魔[/gold]：[purple]本能[/purple]。",
+        "rarityKey":  "Ancient",
+        "rarity":  "先古遗物",
+        "pool":  "shared"
+    },
+    {
+        "id":  "RINGING_TRIANGLE",
+        "name":  "三角铃鼓",
+        "description":  "在每场战斗的第一回合[gold]保留[/gold]你的[gold]手牌[/gold]。",
+        "rarityKey":  "Shop",
+        "rarity":  "商店遗物",
+        "pool":  "shared"
+    },
+    {
+        "id":  "UNCEASING_TOP",
+        "name":  "不休陀螺",
+        "description":  "在你的回合，当你没有[gold]手牌[/gold]时，抽一张牌。",
+        "rarityKey":  "Rare",
+        "rarity":  "稀有遗物",
+        "pool":  "shared"
+    },
+    {
+        "id":  "UNSETTLING_LAMP",
+        "name":  "不安油灯",
+        "description":  "你在每场战斗中第一次打出能给予敌人[gold]负面状态[/gold]的牌时，将其效果翻倍。",
+        "rarityKey":  "Rare",
+        "rarity":  "稀有遗物",
+        "pool":  "shared"
+    },
+    {
+        "id":  "UNDYING_SIGIL",
+        "name":  "不死符文",
+        "description":  "当敌人的[gold]灾厄[/gold]层数大于等于其生命值时，它造成的伤害降低[blue]50%[/blue]。",
+        "rarityKey":  "Shop",
+        "rarity":  "商店遗物",
+        "pool":  "necrobinder"
+    }
+]

@@ -1,209 +1,149 @@
-.battle-reward-screen {
-  position: fixed;
-  top: 0;
-  left: 0;
+.reward-screen {
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
 }
-
-.reward-container {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border: 3px solid #4ecdc4;
+.reward-panel {
+  background: linear-gradient(160deg, #1a1208 0%, #0d0d1a 100%);
+  border: 1px solid rgba(244, 200, 66, 0.4);
   border-radius: 16px;
-  padding: 30px;
+  padding: 32px 40px;
+  min-width: 600px;
   max-width: 800px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  color: white;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
-
 .reward-title {
-  font-size: 32px;
-  font-weight: bold;
-  color: #4ecdc4;
+  color: #f4c842;
+  font-size: 26px;
   text-align: center;
-  margin-bottom: 30px;
-  text-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+  text-shadow: 0 0 20px rgba(244,200,66,0.4);
 }
-
-.reward-section {
-  margin-bottom: 30px;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.3);
+.reward-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.05);
   border-radius: 8px;
 }
-
-.reward-label {
-  font-size: 18px;
-  font-weight: bold;
-  color: #4ecdc4;
-  margin-bottom: 15px;
+.reward-gold { color: #f4c842; font-size: 20px; font-weight: bold; }
+.relic-image { width: 40px; height: 40px; object-fit: contain; }
+.relic-info { display: flex; flex-direction: column; gap: 2px; }
+.relic-name { color: #f0e0c0; font-weight: bold; font-size: 15px; }
+.relic-desc { color: #a09080; font-size: 13px; }
+.card-choices-section { display: flex; flex-direction: column; gap: 12px; }
+.choices-title {
+  display: flex; align-items: center; gap: 8px;
+  color: #e8e0d0; font-size: 18px;
 }
-
-.reward-gold {
-  font-size: 24px;
-  color: #ffd93d;
-  font-weight: bold;
-  text-align: center;
-}
-
 .card-choices {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+.reward-card {
+  width: 140px;
+  background: linear-gradient(160deg, #2a1a0a, #150e05);
+  border: 1px solid rgba(255,200,80,0.35);
+  border-radius: 10px;
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+.reward-card:hover {
+  transform: translateY(-8px) scale(1.05);
+  border-color: #f4c842;
+  box-shadow: 0 8px 24px rgba(244,200,66,0.3);
+}
+.reward-card-cost {
+  position: absolute;
+  top: 6px; left: 6px;
+  width: 22px; height: 22px;
+  background: #c0392b;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: bold; color: white;
+}
+.reward-card-art {
+  width: 110px; height: 80px; object-fit: cover; border-radius: 6px;
+  background: #222; margin-top: 4px;
+}
+.reward-card-name { font-size: 13px; font-weight: bold; color: #f0e0c0; text-align: center; }
+.reward-card-type { font-size: 10px; font-weight: bold; text-transform: uppercase; }
+.reward-card-desc { font-size: 10px; color: #a09080; text-align: center; line-height: 1.4; }
+.skip-btn {
+  align-self: center;
+  padding: 8px 24px;
+  background: #2a1a0a;
+  color: #888;
+  border: 1px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.skip-btn:hover { border-color: #f4c842; color: #f4c842; }
+
+/* Rarity badges */
+.rarity-badge {
+  font-size: 9px; font-weight: bold; text-transform: uppercase;
+  letter-spacing: 0.5px; padding: 2px 6px; border-radius: 3px;
+}
+.rarity-badge-COMMON   { background: rgba(130,130,130,0.25); color: #aaa; }
+.rarity-badge-UNCOMMON { background: rgba(74,144,217,0.25);  color: #7ab8f5; }
+.rarity-badge-RARE     { background: rgba(245,166,35,0.25);  color: #f5c860; }
+
+/* Rarity-tinted card borders */
+.reward-card[data-rarity="UNCOMMON"] { border-color: rgba(74,144,217,0.55); }
+.reward-card[data-rarity="UNCOMMON"]:hover { border-color: #7ab8f5; box-shadow: 0 8px 24px rgba(74,144,217,0.35); }
+.reward-card[data-rarity="RARE"]     { border-color: rgba(245,166,35,0.7); }
+.reward-card[data-rarity="RARE"]:hover { border-color: #f5c860; box-shadow: 0 8px 28px rgba(245,166,35,0.45); }
+
+/* Boss relic selection */
+.boss-relic-choices {
   display: flex;
   gap: 20px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 15px;
 }
-
-.card-choice {
-  min-width: 200px;
-  width: 200px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: 3px solid transparent;
-  border-radius: 10px;
-  padding: 15px;
+.boss-relic-card {
+  width: 160px;
+  background: linear-gradient(160deg, #1e0a2a, #110820);
+  border: 1px solid rgba(200,120,255,0.45);
+  border-radius: 12px;
+  padding: 16px 12px;
   cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 8px;
+  transition: all 0.18s;
 }
-
-.card-choice:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+.boss-relic-card:hover {
+  transform: translateY(-6px) scale(1.04);
+  border-color: #c87fff;
+  box-shadow: 0 8px 28px rgba(200,120,255,0.4);
 }
-
-.card-choice.selected {
-  border-color: #4ecdc4;
-  box-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
-}
-
-.card-image-container {
-  width: 100%;
-  height: 150px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
+.boss-relic-img {
+  width: 64px; height: 64px;
+  object-fit: contain;
+  background: rgba(255,255,255,0.05);
   border-radius: 8px;
-  overflow: hidden;
+  padding: 4px;
 }
-
-.card-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.boss-relic-name {
+  font-size: 14px; font-weight: bold; text-align: center;
 }
-
-.card-name {
-  font-weight: bold;
-  font-size: 16px;
-  margin-bottom: 6px;
-  text-align: center;
-  width: 100%;
+.boss-relic-desc {
+  font-size: 11px; color: #a09080; text-align: center; line-height: 1.4;
 }
-
-.card-cost {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: #ff6b6b;
-  color: white;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-}
-
-.card-description {
-  font-size: 12px;
-  margin-top: 6px;
-  opacity: 0.9;
-  text-align: center;
-  line-height: 1.4;
-}
-
-.card-damage {
-  color: #ff6b6b;
-  font-weight: bold;
-  margin-top: 4px;
-}
-
-.card-block {
-  color: #4ecdc4;
-  font-weight: bold;
-  margin-top: 4px;
-}
-
-.skip-card {
-  width: 100%;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 16px;
-}
-
-.skip-card:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.relic-reward,
-.potion-reward {
-  background: rgba(78, 205, 196, 0.2);
-  border: 2px solid #4ecdc4;
-  border-radius: 8px;
-  padding: 15px;
-  text-align: center;
-}
-
-.relic-name,
-.potion-name {
-  font-size: 20px;
-  font-weight: bold;
-  color: #4ecdc4;
-  margin-bottom: 8px;
-}
-
-.relic-description,
-.potion-description {
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-.accept-reward {
-  width: 100%;
-  padding: 15px;
-  font-size: 18px;
-  background: #4ecdc4;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-weight: bold;
-  margin-top: 20px;
-}
-
-.accept-reward:hover {
-  background: #45b8b0;
-  transform: scale(1.05);
-}
-

@@ -1,0 +1,14 @@
+﻿SLAY THE SPIRE RELIC DATABASE
+====================================
+Total Relics: 293
+
+Distribution by Rarity:
+  Ancient: 97
+  Rare: 50
+  Uncommon: 40
+  Event: 35
+  Shop: 30
+  Common: 30
+  Starter: 10
+  None: 1
+

@@ -1,382 +1,221 @@
-import { useState, useEffect } from 'react';
-import { getMonsterImage, getCardImage } from '../utils/imageLoader.js';
-// import { getCachedMoegirlImageUrl } from '../utils/imageApi.js'; // 可选：使用API获取图片
-import './BattleScreen.css';
+import './BattleScreen.css'
 
-export default function BattleScreen({ battle, player, onEndTurn, onPlayCard, onEndBattle, onUsePotion }) {
-  const [selectedCard, setSelectedCard] = useState(null);
-  const [selectedTarget, setSelectedTarget] = useState(0);
-  const [damageNumbers, setDamageNumbers] = useState([]); // 伤害数字显示
-  const [showDrawPile, setShowDrawPile] = useState(false);
-  const [showDiscardPile, setShowDiscardPile] = useState(false);
-  const [showExhaustPile, setShowExhaustPile] = useState(false);
+const STATUS_NAMES = {
+  VULNERABLE: '易伤', WEAK: '虚弱', FRAIL: '脆弱', POISON: '毒素',
+  STRENGTH: '力量', DEXTERITY: '敏捷', RITUAL: '仪式', FLEX_STRENGTH: '临时力量',
+  ARTIFACT: '神器', METALLICIZE: '金属化', FEEL_NO_PAIN: '无痛',
+  DEMON_FORM: '恶魔形态', BARRICADE: '壁垒', DOUBLE_TAP: '连击', AMPLIFY: '增幅',
+}
 
-  if (!battle) return null;
+// Debuff effects shown with a red tint
+const DEBUFF_KEYS = new Set(['VULNERABLE', 'WEAK', 'FRAIL', 'POISON'])
 
-  const handleCardClick = (cardIndex) => {
-    if (selectedCard === cardIndex) {
-      // 如果点击已选中的卡牌，取消选择
-      setSelectedCard(null);
-    } else {
-      setSelectedCard(cardIndex);
-    }
-  };
+function StatusBadge({ effectKey, value }) {
+  if (!value || value <= 0) return null
+  const isDebuff = DEBUFF_KEYS.has(effectKey)
+  return (
+    <span className={`status-badge status-${effectKey.toLowerCase()}${isDebuff ? ' debuff' : ' buff'}`}>
+      {STATUS_NAMES[effectKey] || effectKey} {value}
+    </span>
+  )
+}
 
-  const handlePlayCard = () => {
-    if (selectedCard !== null) {
-      const result = onPlayCard(selectedCard, selectedTarget);
-      if (result) {
-        setSelectedCard(null);
-        
-        // 显示伤害数字
-        if (result.damageInfo) {
-          showDamageNumbers(result.damageInfo);
-        }
-      }
-    }
-  };
-  
-  // 显示伤害数字
-  const showDamageNumbers = (damageInfo) => {
-    const newNumbers = [];
-    
-    if (damageInfo.isAOE && damageInfo.hits) {
-      // AOE伤害
-      damageInfo.hits.forEach((hit, index) => {
-        if (hit.displayedDamage > 0) {
-          newNumbers.push({
-            id: Date.now() + index,
-            targetIndex: hit.targetIndex,
-            damage: hit.displayedDamage,
-            blocked: hit.blocked || 0,
-            x: Math.random() * 50 - 25, // 随机位置
-            y: Math.random() * 50 - 25
-          });
-        }
-      });
-    } else if (damageInfo.isMultiHit && damageInfo.hits) {
-      // 多次攻击
-      damageInfo.hits.forEach((hit, index) => {
-        if (hit.displayedDamage > 0) {
-          newNumbers.push({
-            id: Date.now() + index,
-            targetIndex: damageInfo.targetIndex,
-            damage: hit.displayedDamage,
-            blocked: hit.blocked || 0,
-            x: Math.random() * 50 - 25,
-            y: Math.random() * 50 - 25
-          });
-        }
-      });
-    } else if (damageInfo.displayedDamage > 0) {
-      // 单次伤害
-      newNumbers.push({
-        id: Date.now(),
-        targetIndex: damageInfo.targetIndex,
-        damage: damageInfo.displayedDamage,
-        blocked: damageInfo.blocked || 0,
-        x: Math.random() * 50 - 25,
-        y: Math.random() * 50 - 25
-      });
-    }
-    
-    if (newNumbers.length > 0) {
-      setDamageNumbers(prev => [...prev, ...newNumbers]);
-      
-      // 2秒后移除伤害数字
-      setTimeout(() => {
-        setDamageNumbers(prev => prev.filter(n => !newNumbers.find(newN => newN.id === n.id)));
-      }, 2000);
-    }
-  };
+function CardComponent({ card, selected, disabled, onClick, amplifyActive }) {
+  const typeColors = { ATTACK: '#c0392b', SKILL: '#27ae60', POWER: '#8e44ad', STATUS: '#7f8c8d' }
+  const displayCost = (amplifyActive && card.type === 'POWER') ? 0 : card.cost
+  return (
+    <div
+      className={`battle-card${selected ? ' selected' : ''}${disabled ? ' disabled' : ''}`}
+      onClick={onClick}
+      title={card.description}
+    >
+      <div className="card-cost" style={{ background: disabled ? '#555' : '#c0392b' }}>{displayCost}</div>
+      <img className="card-art" src={card.image} alt={card.name} onError={e => { e.target.style.display='none' }} />
+      <div className="card-name">{card.name}</div>
+      <div className="card-type" style={{ color: typeColors[card.type] || '#aaa' }}>{card.type}</div>
+      <div className="card-desc">{card.description}</div>
+    </div>
+  )
+}
 
-  const handleEnemyClick = (index) => {
-    setSelectedTarget(index);
-    if (selectedCard !== null) {
-      handlePlayCard();
-    }
-  };
+function HPBar({ current, max, color = '#e05252' }) {
+  const pct = Math.max(0, Math.min(100, (current / max) * 100))
+  return (
+    <div className="hp-bar-container">
+      <div className="hp-bar-fill" style={{ width: pct + '%', background: color }} />
+      <span className="hp-bar-text">{current}/{max}</span>
+    </div>
+  )
+}
 
-  // 检查战斗状态
-  useEffect(() => {
-    if (!battle) return;
-    
-    // 检查敌人生命值
-    const enemyHpChanged = battle.enemies.some(e => e.hp <= 0);
-    const playerHp = battle.player?.hp || 0;
-    
-    if (enemyHpChanged || playerHp <= 0) {
-      const state = battle.checkBattleState();
-      if (state === 'victory' || state === 'defeat') {
-        onEndBattle(state === 'victory');
-      }
-    }
-  }, [battle?.player?.hp, battle?.enemies?.map(e => e.hp).join(','), onEndBattle]);
+function IntentDisplay({ intent }) {
+  if (!intent) return null
+  const imgMap = { ATTACK: '/assets/intents/attack.png', DEFEND: '/assets/intents/defend.png', BUFF: '/assets/intents/buff.png', DEBUFF: '/assets/intents/debuff.png' }
+  const img = imgMap[intent.type] || '/assets/intents/unknown.png'
+  let label = intent.description || intent.type
+  if (intent.type === 'ATTACK' && intent.value) {
+    label = `攻击 ${intent.value}${intent.times > 1 ? ` x${intent.times}` : ''}`
+  }
+  return (
+    <div className="intent-display">
+      <img src={img} alt={intent.type} width={28} height={28} onError={e=>{e.target.style.display='none'}} />
+      <span>{label}</span>
+    </div>
+  )
+}
 
-  const handlePotionClick = (potionIndex) => {
-    if (onUsePotion) {
-      onUsePotion(potionIndex);
-    }
-  };
+export default function BattleScreen({ state, dispatch }) {
+  const { player, battle } = state
+  if (!battle) return null
+
+  const isPlayerTurn = battle.turn === 'PLAYER'
+  const targeting = !!battle.selectedCardId
+  const selectedCard = targeting ? battle.hand.find(c => c.instanceId === battle.selectedCardId) : null
+  const amplifyActive = (player.effects?.AMPLIFY || 0) > 0
+
+  function handleCardClick(card) {
+    if (!isPlayerTurn) return
+    const effectiveCost = (amplifyActive && card.type === 'POWER') ? 0 : card.cost
+    if (effectiveCost > battle.energy) return
+    dispatch({ type: 'SELECT_CARD', payload: { cardInstanceId: card.instanceId } })
+  }
+
+  function handleEnemyClick(index) {
+    if (!isPlayerTurn || !targeting) return
+    dispatch({ type: 'PLAY_CARD', payload: { targetIndex: index } })
+  }
+
+  function handleEndTurn() {
+    if (!isPlayerTurn) return
+    dispatch({ type: 'END_PLAYER_TURN' })
+  }
+
+  const playerEffects = Object.entries(player.effects || {}).filter(([, v]) => v > 0)
 
   return (
     <div className="battle-screen">
-      {/* 药水栏 - 顶部 */}
-      {player && player.potions && player.potions.length > 0 && (
-        <div className="potions-bar">
-          <div className="potions-label">药水</div>
-          <div className="potions-container">
-            {player.potions.map((potion, index) => (
-              <div
-                key={index}
-                className="potion-item"
-                onClick={() => handlePotionClick(index)}
-                title={potion.description}
-              >
-                <div className="potion-icon">🧪</div>
-                <div className="potion-name">{potion.name}</div>
-              </div>
-            ))}
-          </div>
+      {/* Top bar */}
+      <div className="battle-topbar">
+        <div className="topbar-item">
+          <img src="/assets/ui-top-bar/top_bar_heart.png" alt="HP" width={20} height={20} onError={e=>{e.target.style.display='none'}}/>
+          <HPBar current={player.hp} max={player.maxHp} />
         </div>
-      )}
-
-      <div className="battle-header">
-        <div className="player-stats">
-          <div className="stat">
-            <span className="stat-label">生命:</span>
-            <span className="stat-value">{battle.player.hp}/{battle.player.maxHp}</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">格挡:</span>
-            <span className="stat-value">{battle.block}</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">能量:</span>
-            <span className="stat-value">{battle.energy}/{battle.maxEnergy}</span>
-          </div>
-          {battle.player.strength > 0 && (
-            <div className="stat">
-              <span className="stat-label">力量:</span>
-              <span className="stat-value">{battle.player.strength}</span>
-            </div>
-          )}
+        <div className="topbar-item">
+          <span className="block-icon">🛡</span>
+          <span className="block-value">{player.block}</span>
+        </div>
+        <div className="topbar-item">
+          <img src="/assets/ui-energy/ironclad_energy_icon.png" alt="能量" width={22} height={22} onError={e=>{e.target.style.display='none'}} />
+          <span className="energy-value">{battle.energy}/{player.maxEnergy}</span>
+        </div>
+        <div className="topbar-item">
+          <img src="/assets/ui-top-bar/top_bar_gold.png" alt="金" width={18} height={18} onError={e=>{e.target.style.display='none'}} />
+          <span className="gold-value">{player.gold}</span>
+        </div>
+        <div className="topbar-item floor-info">
+          第 {state.floor} 层 | {battle.combatType === 'BOSS' ? '首领' : battle.combatType === 'ELITE' ? '精英' : '普通'} 战斗
         </div>
       </div>
 
-      {/* 左侧抽牌堆 */}
-      <div className="deck-pile-left">
-        <div 
-          className="pile-button draw-pile"
-          onClick={() => setShowDrawPile(!showDrawPile)}
-          title="点击查看抽牌堆"
-        >
-          <div className="pile-label">抽牌堆</div>
-          <div className="pile-count">{battle.drawPile.length}</div>
-        </div>
-        {showDrawPile && (
-          <div className="pile-cards">
-            {battle.drawPile.map((card, index) => (
-              <div key={index} className="pile-card">
-                <div className="card-name">{card.name}</div>
-                <div className="card-cost">{card.cost || 0}</div>
-                <div className="card-description">{card.description}</div>
-              </div>
-            ))}
-            <button className="close-pile" onClick={() => setShowDrawPile(false)}>关闭</button>
-          </div>
-        )}
-      </div>
-
-      {/* 右侧弃牌堆和消耗堆 */}
-      <div className="deck-pile-right">
-        <div 
-          className="pile-button discard-pile"
-          onClick={() => setShowDiscardPile(!showDiscardPile)}
-          title="点击查看弃牌堆"
-        >
-          <div className="pile-label">弃牌堆</div>
-          <div className="pile-count">{battle.discardPile.length}</div>
-        </div>
-        {showDiscardPile && (
-          <div className="pile-cards">
-            {battle.discardPile.map((card, index) => (
-              <div key={index} className="pile-card">
-                <div className="card-name">{card.name}</div>
-                <div className="card-cost">{card.cost || 0}</div>
-                <div className="card-description">{card.description}</div>
-              </div>
-            ))}
-            <button className="close-pile" onClick={() => setShowDiscardPile(false)}>关闭</button>
-          </div>
-        )}
-        <div 
-          className="pile-button exhaust-pile"
-          onClick={() => setShowExhaustPile(!showExhaustPile)}
-          title="点击查看消耗堆"
-        >
-          <div className="pile-label">消耗堆</div>
-          <div className="pile-count">{battle.exhaustPile.length}</div>
-        </div>
-        {showExhaustPile && (
-          <div className="pile-cards">
-            {battle.exhaustPile.map((card, index) => (
-              <div key={index} className="pile-card">
-                <div className="card-name">{card.name}</div>
-                <div className="card-cost">{card.cost || 0}</div>
-                <div className="card-description">{card.description}</div>
-              </div>
-            ))}
-            <button className="close-pile" onClick={() => setShowExhaustPile(false)}>关闭</button>
-          </div>
-        )}
-      </div>
-
-      <div className="enemies-container">
-        {battle.enemies.map((enemy, index) => (
-          <div
-            key={index}
-            className={`enemy ${selectedTarget === index ? 'selected' : ''}`}
-            onClick={() => handleEnemyClick(index)}
-            style={{ position: 'relative' }}
-          >
-            <div className="enemy-image-container">
-              <img 
-                src={getMonsterImage(enemy.id)} 
-                alt={enemy.name}
-                className="enemy-image"
-              />
-            </div>
-            <div className="enemy-name">{enemy.name}</div>
-            <div className="enemy-hp">
-              {enemy.hp}/{enemy.maxHp}
-            </div>
-            {enemy.block > 0 && (
-              <div className="enemy-block">格挡: {enemy.block}</div>
-            )}
-            
-            {/* 敌人意图显示 */}
-            {battle.playerTurn && battle.getEnemyIntent && (() => {
-              const intent = battle.getEnemyIntent(enemy);
-              if (intent) {
-                return (
-                  <div 
-                    className="enemy-intent" 
-                    data-intent-type={intent.type}
-                    title={intent.description}
-                  >
-                    <span className="intent-icon">{intent.icon}</span>
-                    <span className="intent-text">{intent.text}</span>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-            
-            <div className="enemy-buffs">
-              {enemy.vulnerable > 0 && (
-                <div className="buff-icon vulnerable" title={`易伤: 受到的伤害+50% (${enemy.vulnerable}回合)`}>
-                  <span className="buff-value">{enemy.vulnerable}</span>
-                </div>
-              )}
-              {enemy.weak > 0 && (
-                <div className="buff-icon weak" title={`虚弱: 造成的伤害-25% (${enemy.weak}回合)`}>
-                  <span className="buff-value">{enemy.weak}</span>
-                </div>
-              )}
-              {enemy.strength > 0 && (
-                <div className="buff-icon strength" title={`力量: +${enemy.strength}伤害`}>
-                  <span className="buff-value">+{enemy.strength}</span>
-                </div>
-              )}
-            </div>
-            
-            {/* 伤害数字显示 */}
-            {damageNumbers
-              .filter(d => d.targetIndex === index)
-              .map(damageNum => (
-                <div
-                  key={damageNum.id}
-                  className="damage-number"
-                  style={{
-                    position: 'absolute',
-                    left: `calc(50% + ${damageNum.x}px)`,
-                    top: `calc(50% + ${damageNum.y}px)`,
-                    transform: 'translate(-50%, -50%)',
-                    pointerEvents: 'none',
-                    zIndex: 1000
-                  }}
-                >
-                  {damageNum.damage > 0 && (
-                    <span className="damage-value">-{damageNum.damage}</span>
-                  )}
-                  {damageNum.blocked > 0 && (
-                    <span className="blocked-value">格挡 {damageNum.blocked}</span>
-                  )}
-                </div>
-              ))}
-          </div>
-        ))}
-      </div>
-      
-      {/* 玩家buff显示 */}
-      <div className="player-buffs">
-        {battle.player.weak > 0 && (
-          <div className="buff-icon weak" title={`虚弱: 造成的伤害-25% (${battle.player.weak}回合)`}>
-            <span className="buff-value">{battle.player.weak}</span>
-          </div>
-        )}
-        {battle.player.vulnerable > 0 && (
-          <div className="buff-icon vulnerable" title={`易伤: 受到的伤害+50% (${battle.player.vulnerable}回合)`}>
-            <span className="buff-value">{battle.player.vulnerable}</span>
-          </div>
-        )}
-      </div>
-
-      {/* 战斗操作按钮 - 移动到手牌上方 */}
-      <div className="battle-actions">
-        <button onClick={handlePlayCard} disabled={selectedCard === null || !battle.playerTurn}>
-          打出卡牌
-        </button>
-        <button 
-          onClick={onEndTurn}
-          disabled={!battle.playerTurn}
-        >
-          结束回合
-        </button>
-      </div>
-
-      <div className="hand-container">
-        <div className="hand-label">手牌</div>
-        <div className="hand">
-          {battle.hand.map((card, index) => (
+      {/* Main battle area */}
+      <div className="battle-main">
+        {/* Enemy side */}
+        <div className="enemies-area">
+          {targeting && <div className="targeting-hint">选择攻击目标</div>}
+          {battle.enemies.map((enemy, idx) => (
             <div
-              key={index}
-              className={`card ${selectedCard === index ? 'selected' : ''} ${battle.energy < (card.cost || 0) ? 'unplayable' : ''}`}
-              onClick={() => handleCardClick(index)}
+              key={enemy.instanceId}
+              className={`enemy-card${enemy.hp <= 0 ? ' dead' : ''}${targeting ? ' targetable' : ''}`}
+              onClick={() => handleEnemyClick(idx)}
             >
-              <div className="card-image-container">
-                <img 
-                  src={getCardImage(card.id)} 
-                  alt={card.name}
-                  className="card-image"
-                />
+              <img
+                className="enemy-image"
+                src={enemy.image}
+                alt={enemy.name}
+                onError={e => { e.target.src = '/assets/renders/cultists.png' }}
+              />
+              <div className="enemy-info">
+                <div className="enemy-name">{enemy.name}</div>
+                <HPBar current={enemy.hp} max={enemy.maxHp} color="#e05252" />
+                {enemy.block > 0 && <div className="enemy-block">🛡 {enemy.block}</div>}
+                <IntentDisplay intent={enemy.intent} />
+                <div className="enemy-effects">
+                  {Object.entries(enemy.effects || {}).filter(([,v]) => v > 0).map(([k, v]) => (
+                    <StatusBadge key={k} effectKey={k} value={v} />
+                  ))}
+                  {(enemy.strength || 0) > 0 && <span className="status-badge status-strength">力量 {enemy.strength}</span>}
+                </div>
               </div>
-              <div className="card-name">{card.name}</div>
-              <div className="card-cost">{card.cost || 0}</div>
-              <div className="card-description">{card.description}</div>
-              {card.damage > 0 && (
-                <div className="card-damage">伤害: {card.damage}</div>
-              )}
-              {card.block > 0 && (
-                <div className="card-block">格挡: {card.block}</div>
-              )}
             </div>
           ))}
         </div>
+
+        {/* Player side */}
+        <div className="player-area">
+          <img
+            className="player-image"
+            src="/assets/ui-characters/combat_ironclad.png"
+            alt="铁甲人"
+            onError={e => { e.target.src = '/assets/renders/ironclad.png' }}
+          />
+          <div className="player-effects">
+            {playerEffects.map(([k, v]) => <StatusBadge key={k} effectKey={k} value={v} />)}
+            {(player.strength || 0) > 0 && <span className="status-badge status-strength">力量 {player.strength}</span>}
+          </div>
+        </div>
       </div>
 
-    </div>
-  );
-}
+      {/* Combat log */}
+      <div className="combat-log">
+        {battle.log.slice(-4).map((msg, i) => <div key={i} className="log-entry">{msg}</div>)}
+      </div>
 
+      {/* Turn indicator */}
+      {!isPlayerTurn && (
+        <div className="enemy-turn-overlay">敌方回合...</div>
+      )}
+
+      {/* Hand area */}
+      <div className="battle-bottom">
+        <div className="draw-pile" title="摸牌堆">
+          <img src="/assets/ui-combat/draw_pile.png" alt="摸" width={48} onError={e=>{e.target.style.display='none'}} />
+          <span>{battle.drawPile.length}</span>
+        </div>
+
+        <div className="hand-area">
+          {battle.hand.map(card => {
+            const effectiveCost = (amplifyActive && card.type === 'POWER') ? 0 : card.cost
+            return (
+              <CardComponent
+                key={card.instanceId}
+                card={card}
+                selected={card.instanceId === battle.selectedCardId}
+                disabled={!isPlayerTurn || effectiveCost > battle.energy}
+                amplifyActive={amplifyActive}
+                onClick={() => handleCardClick(card)}
+              />
+            )
+          })}
+        </div>
+
+        <div className="end-turn-area">
+          <button
+            className={`end-turn-btn${!isPlayerTurn ? ' disabled' : ''}`}
+            onClick={handleEndTurn}
+            disabled={!isPlayerTurn}
+          >
+            {isPlayerTurn ? '结束回合' : '敌方回合'}
+          </button>
+          {targeting && (
+            <button className="cancel-btn" onClick={() => dispatch({ type: 'DESELECT_CARD' })}>取消</button>
+          )}
+        </div>
+
+        <div className="discard-pile" title="弃牌堆">
+          <img src="/assets/ui-combat/discard_pile.png" alt="弃" width={48} onError={e=>{e.target.style.display='none'}} />
+          <span>{battle.discardPile.length}</span>
+        </div>
+      </div>
+    </div>
+  )
+}

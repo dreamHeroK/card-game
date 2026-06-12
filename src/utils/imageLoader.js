@@ -1,52 +1,49 @@
-// 图片资源加载器 - 使用SVG占位符降级处理
+const CARD_FILENAMES = {
+  STRIKE_R: 'strike_ironclad', STRIKE_R_PLUS: 'strike_ironclad',
+  DEFEND_R: 'defend_ironclad', DEFEND_R_PLUS: 'defend_ironclad',
+  BASH: 'bash', BASH_PLUS: 'bash',
+  ANGER: 'anger', ANGER_PLUS: 'anger',
+  CLEAVE: 'thunderclap', CLEAVE_PLUS: 'thunderclap',
+  ARMAMENTS: 'armaments', ARMAMENTS_PLUS: 'armaments',
+  POMMEL_STRIKE: 'pommel_strike', POMMEL_STRIKE_PLUS: 'pommel_strike',
+  SHRUG_IT_OFF: 'shrug_it_off', SHRUG_IT_OFF_PLUS: 'shrug_it_off',
+  FLEX: 'lift', FLEX_PLUS: 'lift',
+  INFLAME: 'inflame', INFLAME_PLUS: 'inflame',
+  BURN: 'burn',
+}
 
-/**
- * 生成SVG占位符图片
- * @param {string} name - 名称
- * @param {string} color - 颜色
- * @param {number} width - 宽度
- * @param {number} height - 高度
- * @returns {string} SVG data URI
- */
-const createPlaceholder = (name, color = '#667eea', width = 200, height = 280) => {
-  const initial = name.charAt(0).toUpperCase();
-  return `data:image/svg+xml,${encodeURIComponent(`
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${width}" height="${height}" fill="${color}" opacity="0.8"/>
-      <rect x="5" y="5" width="${width-10}" height="${height-10}" fill="none" stroke="#fff" stroke-width="2"/>
-      <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" 
-            font-size="${Math.min(width, height) * 0.3}" fill="#fff" font-weight="bold">${initial}</text>
-    </svg>
-  `)}`;
-};
+const NODE_FILENAMES = {
+  BATTLE: 'map_monster', ELITE: 'map_elite', REST: 'map_rest',
+  SHOP: 'map_shop', EVENT: 'map_unknown', TREASURE: 'map_chest', BOSS: 'map_chest_boss',
+}
 
-// 卡牌图片 - 返回SVG占位符
-export const getCardImage = (cardId) => {
-  return createPlaceholder(cardId, '#667eea', 200, 280);
-};
+export function getCardImage(cardId) {
+  const filename = CARD_FILENAMES[cardId] || 'beta'
+  return `/assets/cards/${filename}.png`
+}
 
-// 怪物图片 - 返回SVG占位符
-export const getMonsterImage = (monsterId) => {
-  return createPlaceholder(monsterId, '#ff4444', 150, 150);
-};
+export function getMonsterImage(monsterId) {
+  const imageMap = {
+    CULTIST: 'cultists', JAWWORM: 'mawler', RED_LOUSE: 'chomper',
+    GREMLIN_NOB: 'fat_gremlin', CEREMONIAL_BEAST: 'ceremonial_beast_boss',
+  }
+  const name = imageMap[monsterId] || monsterId.toLowerCase()
+  return `/assets/renders/${name}.png`
+}
 
-// 遗物图片 - 返回SVG占位符
-export const getRelicImage = (relicId) => {
-  return createPlaceholder(relicId, '#ffaa00', 100, 100);
-};
+export function getIntentImage(intentType) {
+  if (!intentType) return '/assets/intents/unknown.png'
+  const t = intentType.toLowerCase()
+  if (t === 'sleep') return '/assets/intents/sleep.png'
+  return `/assets/intents/${t}.png`
+}
 
-// 节点图标图片 - 返回null，使用emoji
-export const getNodeImage = (nodeType) => {
-  return null; // 使用emoji显示
-};
+export function getNodeImage(nodeType) {
+  const filename = NODE_FILENAMES[nodeType] || 'map_unknown'
+  return `/assets/ui-map-nodes/${filename}.png`
+}
 
-// 预加载图片（占位符不需要预加载）
-export const preloadImage = (url) => {
-  return Promise.resolve();
-};
-
-// 批量预加载图片
-export const preloadImages = async (urls) => {
-  // 占位符不需要预加载
-  return Promise.resolve();
-};
+export function getRelicImage(relicId) {
+  if (!relicId) return '/assets/relics/burning_blood.png'
+  return `/assets/relics/${relicId.toLowerCase()}.png`
+}

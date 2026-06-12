@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:spire-codex.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(mkdir -p \"d:/learning/slayTheSpire/assets\" && echo \"目录创建成功\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://spire-codex.com/api/images\")",
+      "Bash(curl -s -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://spire-codex.com/api/images\")",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(f'{d[\\\\\"id\\\\\"]}: {d[\\\\\"count\\\\\"]} images'\\) if isinstance\\(data,list\\) else print\\(json.dumps\\(data, indent=2, ensure_ascii=False\\)[:2000]\\) for d in \\(data if isinstance\\(data,list\\) else []\\)]\")",
+      "Bash(curl -L -H 'User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36' -H 'Referer: https://spire-codex.com/images?version=v0.106.1' --connect-timeout 30 --max-time 600 -o d:/learning/slayTheSpire/assets/beta-cards-v0.106.1.zip https://spire-codex.com/api/images/beta-cards/download?version=v0.106.1 -w 'HTTP %{http_code}, 大小: %{size_download} bytes\\\\n')",
+      "Bash(unzip -o -q \"beta-vfx-v0.106.1.zip\" -d \"beta-vfx\")",
+      "PowerShell(Write-Host \"---CARDS \\(Ironclad relevant\\)---\"; Get-ChildItem \"d:\\\\learning\\\\slayTheSpire\\\\assets\\\\cards\" | Where-Object {$_.Name -match \"strike|defend|bash|anger|cleave|armament|pommel|shrug|flex|inflame\"} | Select-Object Name; Write-Host \"---MONSTERS---\"; Get-ChildItem \"d:\\\\learning\\\\slayTheSpire\\\\assets\\\\monsters\" -Recurse | Select-Object -First 30 Name; Write-Host \"---INTENTS---\"; Get-ChildItem \"d:\\\\learning\\\\slayTheSpire\\\\assets\\\\intents\" | Select-Object Name; Write-Host \"---UI-COMBAT---\"; Get-ChildItem \"d:\\\\learning\\\\slayTheSpire\\\\assets\\\\ui-combat\" | Select-Object Name; Write-Host \"---UI-MAP-NODES---\"; Get-ChildItem \"d:\\\\learning\\\\slayTheSpire\\\\assets\\\\ui-map-nodes\" | Select-Object Name)",
+      "PowerShell(cd \"d:\\\\learning\\\\slayTheSpire\"; Start-Process powershell -ArgumentList \"-NoExit -Command `\"cd 'd:\\\\learning\\\\slayTheSpire'; npx vite`\"\"; Start-Sleep -Seconds 3; Write-Host \"Dev server started in background\")",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(which chromium-cli *)",
+      "Read(//usr/**)",
+      "Bash(node -e ' *)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx playwright *)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"src/main.jsx: %{http_code}\\\\n\" http://localhost:5173/src/main.jsx)",
+      "Bash(curl -s -o /dev/null -w \"src/App.jsx: %{http_code}\\\\n\" http://localhost:5173/src/App.jsx)",
+      "Bash(curl -s -o /dev/null -w \"src/game/GameState.js: %{http_code}\\\\n\" http://localhost:5173/src/game/GameState.js)",
+      "Bash(curl -s -o /dev/null -w \"assets/renders/ironclad.png: %{http_code}\\\\n\" http://localhost:5173/assets/renders/ironclad.png)",
+      "Bash(curl -s -o /dev/null -w \"assets/cards/strike_ironclad.png: %{http_code}\\\\n\" http://localhost:5173/assets/cards/strike_ironclad.png)",
+      "Bash(# Try chromium directly from its install path *)",
+      "Read(//c/Users/leo.kang/AppData/Local/ms-playwright\" 2>/dev/**)",
+      "Read(//c/Users/leo.kang/AppData/Local/ms-playwright/**)",
+      "Bash(C:/Users/leo.kang/AppData/Local/ms-playwright/chromium-1223/chrome-win64/chrome.exe --headless=new --screenshot=/tmp/sts_main.png --window-size=1280,720 --no-sandbox --disable-gpu http://localhost:5173/)",
+      "Read(//tmp/**)",
+      "Read(//c/Users/leo.kang/AppData/Local/Temp/**)",
+      "Bash(mkdir -p \"C:/Users/leo.kang/.claude/projects/d--learning-slayTheSpire/memory\")"
+    ],
+    "additionalDirectories": [
+      "d:\\learning\\slayTheSpire",
+      "C:\\Users\\leo.kang\\.claude\\projects\\d--learning-slayTheSpire"
+    ]
+  }
+}

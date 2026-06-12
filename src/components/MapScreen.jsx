@@ -1,254 +1,266 @@
-import { useMemo, useEffect, useRef, useState } from 'react';
-import { getNodeImage } from '../utils/imageLoader.js';
-import './MapScreen.css';
+import './MapScreen.css'
+import { getNodeImage, getRelicImage } from '../utils/imageLoader.js'
 
-export default function MapScreen({ map, player, onNodeClick }) {
-  if (!map) return null;
+const NODE_LABELS = {
+  BATTLE: '战斗', ELITE: '精英', REST: '篝火', SHOP: '商店',
+  EVENT: '未知', BOSS: '首领', TREASURE: '宝箱',
+}
 
-  const currentNode = map.getCurrentNode();
-  const currentNodeRef = useRef(null);
-  const mapContainerRef = useRef(null);
-  
-  // 按层分组节点，从下到上
-  const nodesByFloor = useMemo(() => {
-    const grouped = map.getNodesByFloor();
-    const floors = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-    return { grouped, floors };
-  }, [map]);
+const ANCHOR_LABELS = { 4: '精英锚点', 8: '商店锚点' }
 
-  // 获取可访问的下一层节点
-  const availableNextNodes = useMemo(() => {
-    return map.getAvailableNextNodes();
-  }, [map, currentNode]);
-  
-  // 获取所有连接
-  const connections = useMemo(() => {
-    return map.getConnections ? map.getConnections() : [];
-  }, [map]);
-  
-  // 存储节点refs用于绘制连线
-  const nodeRefs = useRef({});
-  
-  // 设置节点ref
-  const setNodeRef = (nodeId, element) => {
-    if (element) {
-      nodeRefs.current[nodeId] = element;
-    } else {
-      delete nodeRefs.current[nodeId];
-    }
-  };
-  
-  // 当进入地图页面时，自动滚动到当前位置
-  useEffect(() => {
-    if (currentNodeRef.current && mapContainerRef.current) {
-      // 延迟一下确保DOM已经渲染
-      setTimeout(() => {
-        const nodeElement = currentNodeRef.current;
-        const container = mapContainerRef.current;
-        
-        if (nodeElement && container) {
-          // 获取节点相对于容器的位置
-          const nodeRect = nodeElement.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          
-          // 计算需要滚动的距离（让当前节点在视口中央偏下位置）
-          const scrollTop = container.scrollTop + nodeRect.top - containerRect.top - (containerRect.height / 3);
-          
-          // 平滑滚动到当前位置
-          container.scrollTo({
-            top: Math.max(0, scrollTop),
-            behavior: 'smooth'
-          });
-        }
-      }, 100);
-    }
-  }, [currentNode?.id]); // 当当前节点变化时触发
-  
-  // 当节点位置变化时，重新绘制连线
-  const [connectionUpdateTrigger, setConnectionUpdateTrigger] = useState(0);
-  
-  useEffect(() => {
-    // 延迟更新连线，确保所有节点ref都已设置
-    const timer = setTimeout(() => {
-      setConnectionUpdateTrigger(prev => prev + 1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [nodesByFloor, connections, currentNode?.id]);
-  
-  // 当窗口大小变化时，重新绘制连线
-  useEffect(() => {
-    const handleResize = () => {
-      setConnectionUpdateTrigger(prev => prev + 1);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+const COL_SPACING = 132
+const X_OFFSET = 50
+
+export default function MapScreen({ state, dispatch }) {
+  const { player, map, floor } = state
+  if (!map) return null
+
+  const mapWidth = map.mapWidth || 1580
+  const mapHeight = map.mapHeight || 700
+  const anchorCols = map.anchorCols || []
+
+  function handleNodeClick(node) {
+    if (!map.availableNodeIds.includes(node.id)) return
+    dispatch({ type: 'SELECT_NODE', payload: { nodeId: node.id } })
+  }
 
   return (
     <div className="map-screen">
+      {/* Header */}
       <div className="map-header">
-        <h1>杀戮尖塔</h1>
-        <div className="player-info">
-          <div className="info-item">层数: {currentNode ? currentNode.floor + 1 : 0}/{map.maxFloor}</div>
-          <div className="info-item">生命: {player.hp}/{player.maxHp}</div>
-          <div className="info-item">金币: {player.gold}</div>
-          <div className="info-item">遗物: {player.relics.length}</div>
+        <div className="map-header-left">
+          <span className="act-title">第一幕 — 荣耀大厅</span>
+          <span className="floor-label">第 {floor} 层</span>
         </div>
-      </div>
-
-      <div className="map-container" ref={mapContainerRef}>
-        <div className="map-nodes-wrapper">
-          {/* 绘制连线 */}
-          <svg className="map-connections" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none' }}>
-            {connections.map((conn, index) => {
-              // 使用connectionUpdateTrigger来强制重新计算连线位置
-              const _ = connectionUpdateTrigger;
-              const fromNode = map.getNode(conn.from);
-              const toNode = map.getNode(conn.to);
-              if (!fromNode || !toNode) return null;
-              
-              const fromElement = nodeRefs.current[conn.from];
-              const toElement = nodeRefs.current[conn.to];
-              
-              // 如果节点ref还没设置好，返回null（会在下次渲染时重试）
-              if (!fromElement || !toElement) return null;
-              
-              const fromRect = fromElement.getBoundingClientRect();
-              const toRect = toElement.getBoundingClientRect();
-              const containerRect = mapContainerRef.current?.getBoundingClientRect();
-              
-              if (!containerRect) return null;
-              
-              // 计算相对于容器的坐标
-              const fromX = fromRect.left + fromRect.width / 2 - containerRect.left + (mapContainerRef.current?.scrollLeft || 0);
-              const fromY = fromRect.top + fromRect.height / 2 - containerRect.top + (mapContainerRef.current?.scrollTop || 0);
-              const toX = toRect.left + toRect.width / 2 - containerRect.left + (mapContainerRef.current?.scrollLeft || 0);
-              const toY = toRect.top + toRect.height / 2 - containerRect.top + (mapContainerRef.current?.scrollTop || 0);
-              
-              // 检查是否可访问
-              const isAccessible = map.isNodeAccessible(conn.to);
-              const isVisited = toNode.visited;
-              
-              return (
-                <line
-                  key={`${conn.from}-${conn.to}-${index}`}
-                  x1={fromX}
-                  y1={fromY}
-                  x2={toX}
-                  y2={toY}
-                  stroke={isAccessible && !isVisited ? '#4ecdc4' : 'rgba(255, 255, 255, 0.2)'}
-                  strokeWidth={isAccessible && !isVisited ? 3 : 2}
-                  strokeOpacity={isVisited ? 0.3 : 0.6}
-                  className="connection-line"
-                />
-              );
-            })}
-          </svg>
-          
-          {/* 绘制节点（从下到上） */}
-          <div className="map-nodes" style={{ position: 'relative', zIndex: 1 }}>
-            {nodesByFloor.floors.map((floor) => (
-              <div key={floor} className="map-floor" style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: '20px',
-                marginBottom: '40px',
-                position: 'relative'
-              }}>
-                {nodesByFloor.grouped[floor].map((node) => {
-                  const isCurrent = currentNode && node.id === currentNode.id;
-                  // 可访问的节点：
-                  // 1. 如果没有当前节点，第0层的节点都可以点击（选择起始节点）
-                  // 2. 当前节点（未访问）
-                  // 3. 从当前节点可达的下一层节点（未访问）
-                  const isAccessible = !node.visited && map.isNodeAccessible(node.id);
-                  const isVisited = node.visited;
-                  // 如果没有当前节点且是第0层，可以点击；否则检查是否可访问
-                  const canClick = (!currentNode && node.floor === 0 && !isVisited) || (isCurrent && !isVisited) || isAccessible;
-                  
-                  return (
-                    <div
-                      key={node.id}
-                      ref={(el) => {
-                        if (isCurrent) {
-                          currentNodeRef.current = el;
-                        }
-                        setNodeRef(node.id, el);
-                      }}
-                      className={`map-node ${node.type} ${isVisited ? 'visited' : ''} ${isCurrent ? 'current' : ''} ${isAccessible ? 'accessible' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation(); // 阻止事件冒泡
-                        // 可以点击当前节点或可访问的下一层节点
-                        if (canClick && onNodeClick) {
-                          onNodeClick(node);
-                        }
-                      }}
-                      style={{ position: 'relative', cursor: canClick ? 'pointer' : 'default' }}
-                    >
-                      <div className="node-icon">
-                        {getNodeImage(node.type) ? (
-                          <img 
-                            src={getNodeImage(node.type)} 
-                            alt={node.type}
-                            className="node-icon-image"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              if (e.target.nextElementSibling) {
-                                e.target.nextElementSibling.style.display = 'block';
-                              }
-                            }}
-                          />
-                        ) : null}
-                        <span className="node-icon-fallback" style={{ display: getNodeImage(node.type) ? 'none' : 'block' }}>
-                          {node.type === 'monster' && '⚔️'}
-                          {node.type === 'elite' && '👹'}
-                          {node.type === 'boss' && '👑'}
-                          {node.type === 'rest' && '🛏️'}
-                          {node.type === 'shop' && '🛒'}
-                          {node.type === 'treasure' && '💎'}
-                          {node.type === 'event' && '❓'}
-                        </span>
-                      </div>
-                      <div className="node-label">
-                        {node.type === 'monster' && '战斗'}
-                        {node.type === 'elite' && '精英'}
-                        {node.type === 'boss' && 'Boss'}
-                        {node.type === 'rest' && '休息'}
-                        {node.type === 'shop' && '商店'}
-                        {node.type === 'treasure' && '宝箱'}
-                        {node.type === 'event' && '事件'}
-                      </div>
-                      {isCurrent && <div className="current-indicator">当前位置</div>}
-                    </div>
-                  );
-                })}
-              </div>
+        <div className="map-header-center">
+          <div className="relic-row">
+            {player.relics.map(relicId => (
+              <img
+                key={relicId}
+                className="relic-icon"
+                src={getRelicImage(relicId)}
+                alt={relicId}
+                title={relicId}
+                onError={e => { e.target.style.display = 'none' }}
+              />
             ))}
+          </div>
+        </div>
+        <div className="map-header-right">
+          <div className="stat-chip">
+            <img src="/assets/ui-top-bar/top_bar_heart.png" alt="HP" width={16} onError={e => { e.target.style.display = 'none' }} />
+            {player.hp}/{player.maxHp}
+          </div>
+          <div className="stat-chip gold">
+            <img src="/assets/ui-top-bar/top_bar_gold.png" alt="Gold" width={16} onError={e => { e.target.style.display = 'none' }} />
+            {player.gold}
+          </div>
+          <div className="stat-chip">
+            <img src="/assets/ui-top-bar/top_bar_deck.png" alt="Deck" width={16} onError={e => { e.target.style.display = 'none' }} />
+            {player.deck.length} 张牌
           </div>
         </div>
       </div>
 
-      <div className="player-deck-info">
-        <h3>牌组 ({player.deck.length} 张)</h3>
-        <div className="deck-preview">
-          {player.deck.slice(0, 10).map((card, index) => (
-            <span key={index} className="deck-card-preview">{card.name}</span>
+      {/* Map canvas */}
+      <div className="map-container">
+        <div className="map-scroll-inner" style={{ width: mapWidth, height: mapHeight }}>
+
+          <svg
+            className="map-paths-svg"
+            width={mapWidth}
+            height={mapHeight}
+            style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+          >
+            <defs>
+              {/* Anchor column gradient */}
+              <linearGradient id="anchorGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(160,100,255,0)" />
+                <stop offset="30%" stopColor="rgba(160,100,255,0.22)" />
+                <stop offset="70%" stopColor="rgba(160,100,255,0.22)" />
+                <stop offset="100%" stopColor="rgba(160,100,255,0)" />
+              </linearGradient>
+
+              {/* Glow filter for available paths */}
+              <filter id="availableGlow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+
+              {/* Soft glow filter for completed paths */}
+              <filter id="completedGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="1.8" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* Anchor column glow bands */}
+            {anchorCols.filter(c => c > 0 && c < 11).map(col => {
+              const cx = col * COL_SPACING + X_OFFSET + 26
+              return (
+                <rect
+                  key={`anchor-band-${col}`}
+                  x={cx - 28} y={0}
+                  width={56} height={mapHeight}
+                  fill="url(#anchorGrad)"
+                />
+              )
+            })}
+
+            {/* Pass 1 – Locked & Completed paths (rendered behind available) */}
+            {map.paths.map((path, i) => {
+              const fromNode = map.nodes.find(n => n.id === path.from)
+              const toNode = map.nodes.find(n => n.id === path.to)
+              if (!fromNode || !toNode) return null
+
+              const isAvailable = !!map.currentNodeId
+                && fromNode.id === map.currentNodeId
+                && map.availableNodeIds.includes(toNode.id)
+              if (isAvailable) return null
+
+              const isCompleted = fromNode.visited && toNode.visited
+              const isSkip = toNode.col - fromNode.col > 1
+              const x1 = fromNode.x + 26, y1 = fromNode.y + 26
+              const x2 = toNode.x + 26, y2 = toNode.y + 26
+
+              if (isCompleted) {
+                return (
+                  <line
+                    key={`c-${i}`}
+                    x1={x1} y1={y1} x2={x2} y2={y2}
+                    stroke="#f4c842"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    opacity={0.82}
+                    filter="url(#completedGlow)"
+                  />
+                )
+              }
+
+              return (
+                <line
+                  key={`l-${i}`}
+                  x1={x1} y1={y1} x2={x2} y2={y2}
+                  stroke={isSkip ? 'rgba(140,90,220,0.3)' : '#18183a'}
+                  strokeWidth={1.5}
+                  strokeDasharray={isSkip ? '3,5' : '5,4'}
+                  strokeLinecap="round"
+                  opacity={isSkip ? 0.6 : 0.5}
+                />
+              )
+            })}
+
+            {/* Pass 2 – Available paths (rendered on top, with glow) */}
+            {map.paths.map((path, i) => {
+              const fromNode = map.nodes.find(n => n.id === path.from)
+              const toNode = map.nodes.find(n => n.id === path.to)
+              if (!fromNode || !toNode) return null
+
+              const isAvailable = !!map.currentNodeId
+                && fromNode.id === map.currentNodeId
+                && map.availableNodeIds.includes(toNode.id)
+              if (!isAvailable) return null
+
+              const x1 = fromNode.x + 26, y1 = fromNode.y + 26
+              const x2 = toNode.x + 26, y2 = toNode.y + 26
+
+              return (
+                <g key={`a-${i}`}>
+                  {/* Wide glow halo */}
+                  <line
+                    x1={x1} y1={y1} x2={x2} y2={y2}
+                    stroke="#00e8ff"
+                    strokeWidth={10}
+                    strokeLinecap="round"
+                    className="path-available-glow"
+                  />
+                  {/* Core line */}
+                  <line
+                    x1={x1} y1={y1} x2={x2} y2={y2}
+                    stroke="#00e8ff"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    filter="url(#availableGlow)"
+                    className="path-available-main"
+                  />
+                </g>
+              )
+            })}
+          </svg>
+
+          {/* Anchor column labels */}
+          {anchorCols.filter(c => ANCHOR_LABELS[c]).map(col => (
+            <div
+              key={`anchor-label-${col}`}
+              className="anchor-col-label"
+              style={{ left: col * COL_SPACING + X_OFFSET - 16, width: 84 }}
+            >
+              {ANCHOR_LABELS[col]}
+            </div>
           ))}
-          {player.deck.length > 10 && <span>...</span>}
+
+          {/* Nodes */}
+          {map.nodes.map(node => {
+            const isAvailable = map.availableNodeIds.includes(node.id)
+            const isCurrent = node.id === map.currentNodeId
+            const imgSrc = getNodeImage(node.type)
+            const size = node.type === 'BOSS' ? 64 : node.isAnchor ? 54 : 48
+
+            return (
+              <div
+                key={node.id}
+                className={[
+                  'map-node',
+                  `map-node-${node.type.toLowerCase()}`,
+                  node.isAnchor ? 'map-node-anchor' : '',
+                  isAvailable ? 'available' : '',
+                  node.visited ? 'visited' : '',
+                  isCurrent ? 'current' : '',
+                ].filter(Boolean).join(' ')}
+                style={{ left: node.x, top: node.y, width: size, height: size }}
+                onClick={() => handleNodeClick(node)}
+                title={`${NODE_LABELS[node.type] || node.type}${node.isAnchor ? ' [锚点]' : ''}  (第${node.col + 1}列)`}
+              >
+                <img
+                  src={imgSrc}
+                  alt={node.type}
+                  width={size}
+                  height={size}
+                  onError={e => { e.target.style.display = 'none' }}
+                />
+                {isCurrent && (
+                  <img
+                    className="map-marker"
+                    src="/assets/ui-map-nodes/map_marker_ironclad.png"
+                    alt="当前位置"
+                    onError={e => { e.target.style.display = 'none' }}
+                  />
+                )}
+                {isAvailable && <div className="node-available-ring" />}
+              </div>
+            )
+          })}
         </div>
       </div>
 
-      <div className="player-relics">
-        <h3>遗物</h3>
-        <div className="relics-list">
-          {player.relics.map((relic, index) => (
-            <div key={index} className="relic-item" title={relic.description}>
-              {relic.name}
-            </div>
+      {/* Footer: deck preview */}
+      <div className="map-footer">
+        <div className="deck-summary">
+          牌组（{player.deck.length}张）：
+          {player.deck.slice(0, 8).map(card => (
+            <span key={card.instanceId} className="deck-mini-card" title={card.description}>
+              {card.name}{card.upgraded ? '+' : ''}
+            </span>
           ))}
+          {player.deck.length > 8 && <span className="deck-more">+{player.deck.length - 8}张</span>}
         </div>
       </div>
     </div>
-  );
+  )
 }
-
