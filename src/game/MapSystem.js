@@ -112,8 +112,9 @@ export function generateMap(act = 1) {
       }
     })
 
-    // Skip connection to col+2 (20% chance, skip over non-anchor cols only)
-    if (col + 2 <= BOSS_COL && !ANCHOR_COL_SET.has(col + 2)) {
+    // Skip connection to col+2 (20% chance), only when neither col+1 nor col+2 is an anchor.
+    // Prevents skipping over mandatory nodes (elite at 4, shop at 8, boss at 11).
+    if (col + 2 <= BOSS_COL && !ANCHOR_COL_SET.has(col + 1) && !ANCHOR_COL_SET.has(col + 2)) {
       fromCol.forEach(fromId => {
         if (Math.random() < 0.20) {
           addPath(fromId, pickRandom(colNodes[col + 2]))
