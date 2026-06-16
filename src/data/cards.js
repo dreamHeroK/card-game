@@ -253,6 +253,80 @@ export const CARD_DATA = {
     target: 'SELF', upgraded: true, exhaust: false, innate: false, retain: false,
     image: '/assets/cards/barricade.png', description: '格挡不再在回合开始时消失。',
   },
+
+  // ── STS2 新机制卡牌 ─────────────────────────────────────────────────────
+
+  // SENTINEL — 展示【固有(Innate)】机制
+  SENTINEL: {
+    id: 'SENTINEL', name: '哨兵', cost: 1, type: 'SKILL', rarity: 'UNCOMMON',
+    target: 'SELF', block: 5, innate: true, upgraded: false, exhaust: false, retain: false,
+    image: '/assets/cards/sentinel.png', description: '【固有】每场战斗开始时出现在手牌。获得 5 点格挡。', upgradeId: 'SENTINEL_PLUS',
+  },
+  SENTINEL_PLUS: {
+    id: 'SENTINEL_PLUS', name: '哨兵+', cost: 1, type: 'SKILL', rarity: 'UNCOMMON',
+    target: 'SELF', block: 8, innate: true, upgraded: true, exhaust: false, retain: false,
+    image: '/assets/cards/sentinel.png', description: '【固有】每场战斗开始时出现在手牌。获得 8 点格挡。',
+  },
+
+  // BATTLE_HYMN — 展示【活力(Vigor)】机制
+  BATTLE_HYMN: {
+    id: 'BATTLE_HYMN', name: '战歌', cost: 1, type: 'SKILL', rarity: 'COMMON',
+    target: 'SELF', magicNumber: 3, upgraded: false, exhaust: false, innate: false, retain: false,
+    image: '/assets/cards/flex.png', description: '获得 3 层活力。下一张攻击牌伤害 +3。', upgradeId: 'BATTLE_HYMN_PLUS',
+  },
+  BATTLE_HYMN_PLUS: {
+    id: 'BATTLE_HYMN_PLUS', name: '战歌+', cost: 1, type: 'SKILL', rarity: 'COMMON',
+    target: 'SELF', magicNumber: 5, upgraded: true, exhaust: false, innate: false, retain: false,
+    image: '/assets/cards/flex.png', description: '获得 5 层活力。下一张攻击牌伤害 +5。',
+  },
+
+  // FLAME_BARRIER — 展示【荆棘(Thorns)】机制
+  FLAME_BARRIER: {
+    id: 'FLAME_BARRIER', name: '火焰壁垒', cost: 2, type: 'SKILL', rarity: 'UNCOMMON',
+    target: 'SELF', block: 12, magicNumber: 4, upgraded: false, exhaust: false, innate: false, retain: false,
+    image: '/assets/cards/flame_barrier.png', description: '获得 12 点格挡。获得 4 层荆棘（被攻击时反弹 4 点伤害）。', upgradeId: 'FLAME_BARRIER_PLUS',
+  },
+  FLAME_BARRIER_PLUS: {
+    id: 'FLAME_BARRIER_PLUS', name: '火焰壁垒+', cost: 2, type: 'SKILL', rarity: 'UNCOMMON',
+    target: 'SELF', block: 16, magicNumber: 6, upgraded: true, exhaust: false, innate: false, retain: false,
+    image: '/assets/cards/flame_barrier.png', description: '获得 16 点格挡。获得 6 层荆棘。',
+  },
+
+  // TRUE_GRIT — 展示【消耗(Exhaust)】机制互动
+  TRUE_GRIT: {
+    id: 'TRUE_GRIT', name: '坚韧', cost: 1, type: 'SKILL', rarity: 'UNCOMMON',
+    target: 'SELF', block: 7, upgraded: false, exhaust: false, innate: false, retain: false,
+    image: '/assets/cards/true_grit.png', description: '获得 7 点格挡。消耗手牌中一张随机牌。', upgradeId: 'TRUE_GRIT_PLUS',
+  },
+  TRUE_GRIT_PLUS: {
+    id: 'TRUE_GRIT_PLUS', name: '坚韧+', cost: 1, type: 'SKILL', rarity: 'UNCOMMON',
+    target: 'SELF', block: 9, upgraded: true, exhaust: false, innate: false, retain: false,
+    image: '/assets/cards/true_grit.png', description: '获得 9 点格挡。消耗手牌中一张随机牌。',
+  },
+
+  // SHOCKWAVE — 群体控制（弱化+易伤）
+  SHOCKWAVE: {
+    id: 'SHOCKWAVE', name: '冲击波', cost: 2, type: 'SKILL', rarity: 'UNCOMMON',
+    target: 'ALL_ENEMY', magicNumber: 3, upgraded: false, exhaust: true, innate: false, retain: false,
+    image: '/assets/cards/shockwave.png', description: '对所有敌人施加 3 层虚弱和 3 层易伤。消耗。', upgradeId: 'SHOCKWAVE_PLUS',
+  },
+  SHOCKWAVE_PLUS: {
+    id: 'SHOCKWAVE_PLUS', name: '冲击波+', cost: 2, type: 'SKILL', rarity: 'UNCOMMON',
+    target: 'ALL_ENEMY', magicNumber: 5, upgraded: true, exhaust: true, innate: false, retain: false,
+    image: '/assets/cards/shockwave.png', description: '对所有敌人施加 5 层虚弱和 5 层易伤。消耗。',
+  },
+
+  // CLOTHESLINE — 攻击+虚弱（使用现有图片）
+  CLOTHESLINE: {
+    id: 'CLOTHESLINE', name: '晾衣绳', cost: 2, type: 'ATTACK', rarity: 'COMMON',
+    target: 'ENEMY', damage: 12, magicNumber: 2, upgraded: false, exhaust: false, innate: false, retain: false,
+    image: '/assets/cards/uppercut.png', description: '造成 12 点伤害，施加 2 层虚弱。', upgradeId: 'CLOTHESLINE_PLUS',
+  },
+  CLOTHESLINE_PLUS: {
+    id: 'CLOTHESLINE_PLUS', name: '晾衣绳+', cost: 2, type: 'ATTACK', rarity: 'COMMON',
+    target: 'ENEMY', damage: 14, magicNumber: 3, upgraded: true, exhaust: false, innate: false, retain: false,
+    image: '/assets/cards/uppercut.png', description: '造成 14 点伤害，施加 3 层虚弱。',
+  },
 }
 
 export const STARTING_DECK = [
@@ -265,8 +339,10 @@ export const IRONCLAD_CARD_POOL = [
   // Common
   'ANGER', 'CLEAVE', 'ARMAMENTS', 'POMMEL_STRIKE', 'SHRUG_IT_OFF', 'FLEX', 'INFLAME',
   'IRON_WAVE', 'HEADBUTT', 'THUNDERCLAP', 'TWIN_STRIKE',
+  'BATTLE_HYMN', 'CLOTHESLINE',
   // Uncommon
   'CARNAGE', 'UPPERCUT', 'ENTRENCH', 'HEMOKINESIS', 'METALLICIZE', 'FEEL_NO_PAIN',
+  'SENTINEL', 'FLAME_BARRIER', 'TRUE_GRIT', 'SHOCKWAVE',
   // Rare
   'LIMIT_BREAK', 'REAPER', 'DEMON_FORM', 'BARRICADE',
 ]

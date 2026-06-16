@@ -5,12 +5,21 @@ import './BattleScreen.css'
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_NAMES = {
+  // 已有状态
   VULNERABLE: '易伤', WEAK: '虚弱', FRAIL: '脆弱', POISON: '毒素',
   STRENGTH: '力量', DEXTERITY: '敏捷', RITUAL: '仪式', FLEX_STRENGTH: '临时力量',
   ARTIFACT: '神器', METALLICIZE: '金属化', FEEL_NO_PAIN: '无痛',
   DEMON_FORM: '恶魔形态', BARRICADE: '壁垒', DOUBLE_TAP: '连击', AMPLIFY: '增幅',
+  // STS2 新增状态效果
+  THORNS: '荆棘', VIGOR: '活力', REGEN: '再生', BUFFER: '缓冲',
+  INTANGIBLE: '无实体', DOOM: '灾厄',
+  // STS2 行动限制减益
+  CONFUSED: '混乱', SMOGGY: '烟雾弥漫', RINGING: '昏眩', SLOTH: '懒惰', TANGLED: '缠结',
 }
-const DEBUFF_KEYS = new Set(['VULNERABLE', 'WEAK', 'FRAIL', 'POISON'])
+const DEBUFF_KEYS = new Set([
+  'VULNERABLE', 'WEAK', 'FRAIL', 'POISON',
+  'CONFUSED', 'SMOGGY', 'RINGING', 'SLOTH', 'TANGLED',
+])
 
 const TYPE_COLOR  = { ATTACK: '#c83020', SKILL: '#1a6a88', POWER: '#6a1a98', STATUS: '#555' }
 const TYPE_BANNER = { ATTACK: '#7a1800', SKILL: '#003f55', POWER: '#320060', STATUS: '#2a2a2a' }
@@ -46,6 +55,7 @@ function calcDisplayStats(card, player, targetEnemy) {
 
   const str     = player.strength || 0
   const dex     = player.dexterity || 0
+  const vigor   = card.type === 'ATTACK' ? (player.effects?.VIGOR || 0) : 0
   const isWeak  = (player.effects?.WEAK  || 0) > 0
   const isFrail = (player.effects?.FRAIL || 0) > 0
   const isVuln  = targetEnemy ? (targetEnemy.effects?.VULNERABLE || 0) > 0 : false
@@ -55,8 +65,9 @@ function calcDisplayStats(card, player, targetEnemy) {
   const dmgMods = [], blkMods = []
 
   if (card.damage != null) {
-    let d = card.damage + str
+    let d = card.damage + str + vigor
     if (str !== 0) dmgMods.push({ text: `${str > 0 ? '+' : ''}${str} 力量`, color: '#f4c842' })
+    if (vigor > 0) dmgMods.push({ text: `+${vigor} 活力`, color: '#f4a842' })
     if (isWeak) {
       d = Math.floor(d * 0.75)
       dmgMods.push({ text: '×0.75 虚弱', color: '#ff6666' })

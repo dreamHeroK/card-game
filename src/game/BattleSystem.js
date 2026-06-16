@@ -8,10 +8,14 @@ const PERMANENT_EFFECTS = new Set([
   STATUS.STRENGTH, STATUS.DEXTERITY, STATUS.RITUAL,
   STATUS.METALLICIZE, STATUS.FEEL_NO_PAIN, STATUS.DEMON_FORM, STATUS.BARRICADE,
   STATUS.DOUBLE_TAP, STATUS.AMPLIFY,
+  STATUS.THORNS, // 荆棘持续整场战斗
 ])
 
 // Debuffs use max-overwrite stacking (not additive); buffs use additive stacking
-const DEBUFF_EFFECTS = new Set([STATUS.VULNERABLE, STATUS.WEAK, STATUS.FRAIL, STATUS.POISON])
+const DEBUFF_EFFECTS = new Set([
+  STATUS.VULNERABLE, STATUS.WEAK, STATUS.FRAIL, STATUS.POISON,
+  STATUS.CONFUSED, STATUS.SMOGGY, STATUS.RINGING, STATUS.SLOTH, STATUS.TANGLED,
+])
 
 let _counter = 0
 function uid() { return 'id_' + (++_counter) }
@@ -65,8 +69,17 @@ export function calculateBlock(baseBlock, entity) {
 
 export function applyDamageToEntity(entity, damage) {
   if (damage <= 0) return entity
+  // 无实体：本回合所有伤害降为1
+  if ((entity.effects?.[STATUS.INTANGIBLE] || 0) > 0) damage = 1
   if (damage <= entity.block) return { ...entity, block: entity.block - damage }
-  return { ...entity, block: 0, hp: Math.max(0, entity.hp - (damage - entity.block)) }
+  const hpLoss = damage - entity.block
+  const base = { ...entity, block: 0 }
+  // 缓冲：阻止下一次生命损失（消耗1层）
+  const bufferAmt = entity.effects?.[STATUS.BUFFER] || 0
+  if (bufferAmt > 0) {
+    return { ...base, effects: { ...base.effects, [STATUS.BUFFER]: bufferAmt - 1 } }
+  }
+  return { ...base, hp: Math.max(0, entity.hp - hpLoss) }
 }
 
 export function applyEffectToEntity(entity, effectKey, amount) {
@@ -123,7 +136,11 @@ export function drawCards(battle, count) {
 
 export function initBattle(player, enemyMonsterIds, combatType) {
   const deck = player.deck.map(c => ({ ...c, instanceId: uid() }))
-  let drawPile = shuffleArray(deck)
+
+  // 固有(Innate)：每场战斗开始时出现在手牌中
+  const innateDeck = deck.filter(c => c.innate)
+  const normalDeck = deck.filter(c => !c.innate)
+  let drawPile = shuffleArray(normalDeck)
 
   // SNECKO_EYE: randomise costs of all cards in deck at battle start
   const hasSnecko = player.relics.includes('SNECKO_EYE')
@@ -131,8 +148,9 @@ export function initBattle(player, enemyMonsterIds, combatType) {
     drawPile = drawPile.map(c => ({ ...c, cost: Math.floor(Math.random() * 4) }))
   }
 
-  // Initial draw (SNECKO_EYE also draws 2 extra via COMBAT_START trigger in GameState)
-  const hand = drawPile.splice(0, 5)
+  // 手牌 = 所有固有牌 + 从抽牌堆补充至5张
+  const regularDraw = drawPile.splice(0, Math.max(0, 5 - innateDeck.length))
+  const hand = [...innateDeck, ...regularDraw]
 
   const enemies = enemyMonsterIds.map(id => createEnemyInstance(id)).filter(Boolean)
 
@@ -154,6 +172,7 @@ export function initBattle(player, enemyMonsterIds, combatType) {
       // Relic tracking
       relicCounters: {},
       cardsPlayedThisTurn: 0,
+      skillsPlayedThisTurn: 0,
       attackPlayedThisTurn: false,
       noAttackLastTurn: false,
       firstStrengthUsed: false,
@@ -173,6 +192,19 @@ export function resolveCardEffect(state, cardInstanceId, targetIndex) {
   // VELVET_CHOKER: max 6 cards per turn
   if (player.relics.includes('VELVET_CHOKER') && (battle.cardsPlayedThisTurn || 0) >= 6) return state
 
+  const card = battle.hand.find(c => c.instanceId === cardInstanceId)
+  if (!card) return state
+
+  // 不可打出(Unplayable)：无法被打出
+  if (card.unplayable) return state
+
+  // 昏眩(Ringing)：本回合只能打出1张牌
+  if ((player.effects?.[STATUS.RINGING] || 0) > 0 && (battle.cardsPlayedThisTurn || 0) >= 1) return state
+  // 懒惰(Sloth)：每回合最多打出3张牌
+  if ((player.effects?.[STATUS.SLOTH] || 0) > 0 && (battle.cardsPlayedThisTurn || 0) >= 3) return state
+  // 烟雾弥漫(Smoggy)：每回合只能打出1张技能牌
+  if ((player.effects?.[STATUS.SMOGGY] || 0) > 0 && card.type === 'SKILL' && (battle.skillsPlayedThisTurn || 0) >= 1) return state
+
   let enemies = [...battle.enemies]
   let hand = battle.hand.filter(c => c.instanceId !== cardInstanceId)
   let drawPile = [...battle.drawPile]
@@ -182,11 +214,9 @@ export function resolveCardEffect(state, cardInstanceId, targetIndex) {
   let log = [...battle.log]
   let firstAttackUsed = battle.firstAttackUsed
   let cardsPlayedThisTurn = battle.cardsPlayedThisTurn || 0
+  let skillsPlayedThisTurn = battle.skillsPlayedThisTurn || 0
   let attackPlayedThisTurn = battle.attackPlayedThisTurn || false
   let relicCounters = { ...(battle.relicCounters || {}) }
-
-  const card = battle.hand.find(c => c.instanceId === cardInstanceId)
-  if (!card) return state
 
   // AMPLIFY: next Power costs 0
   let actualCost = card.cost
@@ -194,7 +224,19 @@ export function resolveCardEffect(state, cardInstanceId, targetIndex) {
     actualCost = 0
     player = { ...player, effects: { ...player.effects, [STATUS.AMPLIFY]: (player.effects[STATUS.AMPLIFY] || 0) - 1 } }
   }
+  // 缠结(Tangled)：攻击牌费用+1
+  if (card.type === 'ATTACK' && (player.effects?.[STATUS.TANGLED] || 0) > 0) {
+    actualCost += 1
+  }
+  if (energy < actualCost) return state
   energy -= actualCost
+
+  // 活力(Vigor)：下一张攻击牌伤害增加，打出后消耗全部层数
+  let vigorBonus = 0
+  if (card.type === 'ATTACK' && (player.effects?.[STATUS.VIGOR] || 0) > 0) {
+    vigorBonus = player.effects[STATUS.VIGOR]
+    player = { ...player, effects: { ...player.effects, [STATUS.VIGOR]: 0 } }
+  }
 
   const hadDoubleTap = card.type === 'ATTACK' && (player.effects?.[STATUS.DOUBLE_TAP] || 0) > 0
 
@@ -220,14 +262,21 @@ export function resolveCardEffect(state, cardInstanceId, targetIndex) {
   }
 
   const applyAttack = (target, baseDmg) => {
-    let dmg = calculateDamage(baseDmg, player, target, { vulnerableMultiplier: vulnMult })
+    let dmg = calculateDamage(baseDmg + vigorBonus, player, target, { vulnerableMultiplier: vulnMult })
     if (card.type === 'ATTACK' && !firstAttackUsed && player.relics.includes('AKABEKO')) {
       dmg += 8
       firstAttackUsed = true
     } else if (card.type === 'ATTACK' && !firstAttackUsed) {
       firstAttackUsed = true
     }
-    return applyDamageToEntity(target, dmg)
+    const updatedTarget = applyDamageToEntity(target, dmg)
+    // 荆棘(Thorns)：被攻击时对攻击者造成伤害
+    const thornsAmt = target.effects?.[STATUS.THORNS] || 0
+    if (thornsAmt > 0 && dmg > 0) {
+      player = applyDamageToEntity(player, thornsAmt)
+      log = [...log, `荆棘！受到 ${thornsAmt} 点反弹伤害`]
+    }
+    return updatedTarget
   }
 
   switch (baseId) {
@@ -429,6 +478,70 @@ export function resolveCardEffect(state, cardInstanceId, targetIndex) {
       log = [...log, `打出了 ${card.name}，格挡不再消失`]
       break
     }
+    // ── STS2 新卡牌 ────────────────────────────────────────────────────────
+    case 'SENTINEL': {
+      const blk = calculateBlock(card.block || 5, player)
+      player = { ...player, block: player.block + blk }
+      log = [...log, `打出了 ${card.name}，获得 ${blk} 格挡`]
+      break
+    }
+    case 'FLAME_BARRIER': {
+      const blk = calculateBlock(card.block || 12, player)
+      const thorns = card.magicNumber || 4
+      player = {
+        ...player,
+        block: player.block + blk,
+        effects: { ...player.effects, [STATUS.THORNS]: (player.effects?.[STATUS.THORNS] || 0) + thorns },
+      }
+      log = [...log, `打出了 ${card.name}，获得 ${blk} 格挡和 ${thorns} 层荆棘`]
+      break
+    }
+    case 'BATTLE_HYMN': {
+      const vigor = card.magicNumber || 3
+      player = { ...player, effects: { ...player.effects, [STATUS.VIGOR]: (player.effects?.[STATUS.VIGOR] || 0) + vigor } }
+      log = [...log, `打出了 ${card.name}，获得 ${vigor} 层活力`]
+      break
+    }
+    case 'TRUE_GRIT': {
+      const blk = calculateBlock(card.block || 7, player)
+      player = { ...player, block: player.block + blk }
+      // 消耗手牌中一张随机牌（升级版可选择，此处简化为随机）
+      if (hand.length > 0) {
+        const idx = Math.floor(Math.random() * hand.length)
+        const sacrificed = hand[idx]
+        hand = hand.filter((_, i) => i !== idx)
+        exhaustPile = [...exhaustPile, sacrificed]
+        // Feel No Pain: gain block on exhaust
+        const fnp = player.effects?.[STATUS.FEEL_NO_PAIN] || 0
+        if (fnp > 0) player = { ...player, block: player.block + fnp }
+        if (player.relics.includes('CHARONS_ASHES')) {
+          enemies = enemies.map(e => e.hp > 0 ? applyDamageToEntity(e, 3) : e)
+        }
+        log = [...log, `打出了 ${card.name}，获得 ${blk} 格挡，消耗了 ${sacrificed.name}`]
+      } else {
+        log = [...log, `打出了 ${card.name}，获得 ${blk} 格挡`]
+      }
+      break
+    }
+    case 'SHOCKWAVE': {
+      const amt = card.magicNumber || 3
+      enemies = enemies.map(e => {
+        if (e.hp <= 0) return e
+        let u = applyEffectToEntity(e, STATUS.WEAK, amt)
+        u = applyEffectToEntity(u, STATUS.VULNERABLE, amt)
+        return u
+      })
+      log = [...log, `打出了 ${card.name}，对所有敌人施加 ${amt} 层虚弱和易伤`]
+      break
+    }
+    case 'CLOTHESLINE': {
+      const ti = Math.max(0, Math.min(targetIndex, enemies.length - 1))
+      let enemy = applyAttack(enemies[ti], card.damage)
+      enemy = applyEffectToEntity(enemy, STATUS.WEAK, card.magicNumber || 2)
+      enemies = enemies.map((e, i) => i === ti ? enemy : e)
+      log = [...log, `打出了 ${card.name}，造成伤害并施加虚弱`]
+      break
+    }
     default:
       log = [...log, `打出了 ${card.name}`]
   }
@@ -503,6 +616,7 @@ export function resolveCardEffect(state, cardInstanceId, targetIndex) {
 
   // Post-play tracking
   cardsPlayedThisTurn++
+  if (card.type === 'SKILL') skillsPlayedThisTurn++
   if (card.type === 'ATTACK') {
     attackPlayedThisTurn = true
     // NUNCHAKU: every 10 attacks, gain 1 energy
@@ -530,6 +644,7 @@ export function resolveCardEffect(state, cardInstanceId, targetIndex) {
       log,
       firstAttackUsed,
       cardsPlayedThisTurn,
+      skillsPlayedThisTurn,
       attackPlayedThisTurn,
       relicCounters,
     },
@@ -566,6 +681,12 @@ export function endPlayerTurn(state) {
     }
   }
 
+  // 再生(Regen)：回合结束回复生命，数值每回合-1
+  const regenAmt = player.effects?.[STATUS.REGEN] || 0
+  if (regenAmt > 0) {
+    player = { ...player, hp: Math.min(player.maxHp, player.hp + regenAmt) }
+  }
+
   // ORICHALCUM: gain 6 block if ending turn with no block
   if (player.relics.includes('ORICHALCUM') && player.block === 0) {
     player = { ...player, block: 6 }
@@ -573,13 +694,32 @@ export function endPlayerTurn(state) {
 
   // RUNIC_PYRAMID: retain entire hand
   const hasRunicPyramid = player.relics.includes('RUNIC_PYRAMID')
-  const retained = hasRunicPyramid ? battle.hand : battle.hand.filter(c => c.retain)
-  const discarded = hasRunicPyramid ? [] : battle.hand.filter(c => !c.retain)
+
+  // 处理手牌：虚无(Ethereal)牌消耗，保留(Retain)牌留存，其余弃置
+  let newHand = [], newDiscard = [...battle.discardPile], newExhaust = [...battle.exhaustPile]
+  if (hasRunicPyramid) {
+    newHand = battle.hand
+  } else {
+    for (const c of battle.hand) {
+      if (c.retain) {
+        newHand.push(c)
+      } else if (c.ethereal) {
+        // 虚无(Ethereal)：留在手中到回合结束时消耗
+        newExhaust.push(c)
+        // Feel No Pain: gain block on exhaust
+        const fnp = player.effects?.[STATUS.FEEL_NO_PAIN] || 0
+        if (fnp > 0) player = { ...player, block: player.block + fnp }
+      } else {
+        newDiscard.push(c)
+      }
+    }
+  }
 
   battle = {
     ...battle,
-    hand: retained,
-    discardPile: [...battle.discardPile, ...discarded],
+    hand: newHand,
+    discardPile: newDiscard,
+    exhaustPile: newExhaust,
     turn: 'ENEMY',
     selectedCardId: null,
     noAttackLastTurn: !(battle.attackPlayedThisTurn || false),
@@ -642,6 +782,12 @@ export function resolveEnemyTurn(state) {
         // TUNGSTEN_ROD: reduce each hit by 1
         if (hasTungstenRod) dmg = Math.max(0, dmg - 1)
         player = applyDamageToEntity(player, dmg)
+        // 荆棘(Thorns)：玩家被攻击时对攻击者造成伤害
+        const playerThorns = player.effects?.[STATUS.THORNS] || 0
+        if (playerThorns > 0 && dmg > 0) {
+          e = applyDamageToEntity(e, playerThorns)
+          log = [...log, `荆棘反弹 ${playerThorns} 点伤害给 ${e.name}`]
+        }
       }
       log = [...log, `${e.name} 攻击了你！`]
     } else if (intent.type === 'DEFEND') {
@@ -679,6 +825,13 @@ export function resolveEnemyTurn(state) {
     let nextMoveIndex = e.moveIndex + 1
     const nextIntent = getEnemyIntent(e.id, nextMoveIndex, battle.turnNumber)
     e = { ...e, moveIndex: nextMoveIndex, intent: nextIntent }
+
+    // 灾厄(Doom)：敌方回合结束时，若灾厄层数≥HP则死亡
+    const doomAmt = e.effects?.[STATUS.DOOM] || 0
+    if (doomAmt > 0 && doomAmt >= e.hp) {
+      e = { ...e, hp: 0 }
+      log = [...log, `${e.name} 被灾厄击倒！`]
+    }
 
     return e
   })
@@ -749,9 +902,11 @@ export function startPlayerTurn(state) {
   const drawCount = player.relics.includes('SNECKO_EYE') ? 7 : 5
   const drawn = drawCardsInto({ hand: battle.hand, drawPile: battle.drawPile, discardPile: battle.discardPile }, drawCount)
 
-  // SNECKO_EYE: randomize costs of newly drawn cards
+  // SNECKO_EYE / 混乱(Confused)：随机化新摸到的牌的费用
   let newHand = drawn.hand
-  if (player.relics.includes('SNECKO_EYE')) {
+  const hasSneckoEye = player.relics.includes('SNECKO_EYE')
+  const hasConfused = (player.effects?.[STATUS.CONFUSED] || 0) > 0
+  if (hasSneckoEye || hasConfused) {
     const existingIds = new Set(battle.hand.map(c => c.instanceId))
     newHand = newHand.map(c =>
       existingIds.has(c.instanceId) ? c : { ...c, cost: Math.floor(Math.random() * 4) }
@@ -769,6 +924,7 @@ export function startPlayerTurn(state) {
     turnNumber: battle.turnNumber + 1,
     firstAttackUsed: false,
     cardsPlayedThisTurn: 0,
+    skillsPlayedThisTurn: 0,
     attackPlayedThisTurn: false,
   }
 

@@ -24,20 +24,52 @@ export const MAP_HEIGHT = 700
 const COL_SPACING = 132
 const X_OFFSET = 50
 
+// STS2 节点类型概率按层段分布
+// col 1-3 (Overgrowth早期): 战斗多、事件少
+// col 5-7 (Underdocks中期): 均衡、事件增加
+// col 9-10 (Underdocks后期): 精英多、事件最多
 function pickNodeType(col) {
   if (ANCHOR_COL_SET.has(col)) return ANCHOR_TYPES[col]
   const roll = Math.random()
-  if (roll < 0.42) return NODE_TYPES.BATTLE
-  if (roll < 0.58) return NODE_TYPES.ELITE
-  if (roll < 0.70) return NODE_TYPES.REST
-  if (roll < 0.80) return NODE_TYPES.SHOP
-  if (roll < 0.92) return NODE_TYPES.EVENT
-  return NODE_TYPES.TREASURE
+  if (col <= 3) {
+    // 早期: Battle 45% | Elite 12% | Rest 13% | Shop 6% | Event 18% | Treasure 6%
+    if (roll < 0.45) return NODE_TYPES.BATTLE
+    if (roll < 0.57) return NODE_TYPES.ELITE
+    if (roll < 0.70) return NODE_TYPES.REST
+    if (roll < 0.76) return NODE_TYPES.SHOP
+    if (roll < 0.94) return NODE_TYPES.EVENT
+    return NODE_TYPES.TREASURE
+  } else if (col <= 7) {
+    // 中期: Battle 35% | Elite 16% | Rest 12% | Shop 8% | Event 23% | Treasure 6%
+    if (roll < 0.35) return NODE_TYPES.BATTLE
+    if (roll < 0.51) return NODE_TYPES.ELITE
+    if (roll < 0.63) return NODE_TYPES.REST
+    if (roll < 0.71) return NODE_TYPES.SHOP
+    if (roll < 0.94) return NODE_TYPES.EVENT
+    return NODE_TYPES.TREASURE
+  } else {
+    // 后期 (col 9-10): Battle 28% | Elite 22% | Rest 14% | Shop 5% | Event 26% | Treasure 5%
+    if (roll < 0.28) return NODE_TYPES.BATTLE
+    if (roll < 0.50) return NODE_TYPES.ELITE
+    if (roll < 0.64) return NODE_TYPES.REST
+    if (roll < 0.69) return NODE_TYPES.SHOP
+    if (roll < 0.95) return NODE_TYPES.EVENT
+    return NODE_TYPES.TREASURE
+  }
 }
 
-function getEnemyIdsForNode(type) {
-  if (type === NODE_TYPES.BATTLE) return pickRandom(ENCOUNTER_TABLE.NORMAL)
-  if (type === NODE_TYPES.ELITE) return pickRandom(ENCOUNTER_TABLE.ELITE)
+// 按层段（col）选取对应区域的遭遇池
+function getEnemyIdsForNode(type, col) {
+  if (type === NODE_TYPES.BATTLE) {
+    if (col <= 3) return pickRandom(ENCOUNTER_TABLE.NORMAL_EARLY)
+    if (col <= 7) return pickRandom(ENCOUNTER_TABLE.NORMAL_MID)
+    return pickRandom(ENCOUNTER_TABLE.NORMAL_LATE)
+  }
+  if (type === NODE_TYPES.ELITE) {
+    // col 4 是 Overgrowth 精英锚点，col 5+ 用 Underdocks 精英
+    if (col <= 4) return pickRandom(ENCOUNTER_TABLE.ELITE_EARLY)
+    return pickRandom(ENCOUNTER_TABLE.ELITE_LATE)
+  }
   if (type === NODE_TYPES.BOSS) return pickRandom(ENCOUNTER_TABLE.BOSS)
   return undefined
 }
@@ -71,7 +103,7 @@ export function generateMap(act = 1) {
         isAnchor,
         visited: false,
         available: col === 0,
-        enemyIds: getEnemyIdsForNode(type),
+        enemyIds: getEnemyIdsForNode(type, col),
         eventId: type === NODE_TYPES.EVENT ? pickRandom(EVENT_IDS) : undefined,
       })
       colArr.push(id)

@@ -517,52 +517,71 @@ export const MONSTER_DATA = {
   },
 }
 
-// ─── ENCOUNTER TABLE (STS2 Act 1 — spire-codex.com/zhs/encounters) ────────
+// ─── ENCOUNTER TABLE (STS2 Act 1, 按层数/区域分段) ────────────────────────
+// 地图结构: col 0(起点战斗) → 1-3(Overgrowth早期) → 4(精英锚点)
+//           → 5-7(Underdocks中期) → 8(商店锚点) → 9-10(Underdocks后期) → 11(Boss)
 export const ENCOUNTER_TABLE = {
-  NORMAL: [
-    // Overgrowth
+
+  // ── Overgrowth 普通战斗 (col 0-3) ──────────────────────────────────────
+  NORMAL_EARLY: [
     ['NIBBIT'],
     ['NIBBIT', 'NIBBIT'],
     ['CUBEX_CONSTRUCT'],
     ['EYE_WITH_TEETH', 'FOGMOG'],
     ['FUZZY_WURM_CRAWLER'],
-    ['LEAF_SLIME_M', 'LEAF_SLIME_S', 'TWIG_SLIME_M', 'TWIG_SLIME_S'],
-    ['INKLET'],
-    ['MAWLER'],
-    ['FUZZY_WURM_CRAWLER', 'SHRINKER_BEETLE'],
-    ['FLYCONID', 'SNAPPING_JAXFRUIT'],
-    ['ASSASSIN_RAIDER', 'AXE_RAIDER'],
-    ['SHRINKER_BEETLE'],
-    ['FLYCONID', 'LEAF_SLIME_M', 'TWIG_SLIME_M'],
-    ['SLITHERING_STRANGLER', 'LEAF_SLIME_M', 'TWIG_SLIME_M'],
+    ['LEAF_SLIME_M', 'LEAF_SLIME_S'],
+    ['TWIG_SLIME_M', 'TWIG_SLIME_S'],
     ['LEAF_SLIME_M', 'TWIG_SLIME_M'],
-    ['VINE_SHAMBLER'],
-    // Underdocks
+    ['INKLET'],
+    ['SHRINKER_BEETLE'],
+    ['FLYCONID', 'SNAPPING_JAXFRUIT'],
+    ['SLITHERING_STRANGLER'],
+    ['ASSASSIN_RAIDER', 'CROSSBOW_RAIDER'],
+    ['TRACKER_RAIDER', 'ASSASSIN_RAIDER'],
+  ],
+
+  // ── Underdocks 普通战斗 (col 5-7) ──────────────────────────────────────
+  NORMAL_MID: [
     ['CORPSE_SLUG'],
     ['CALCIFIED_CULTIST', 'DAMP_CULTIST'],
     ['GAS_BOMB', 'LIVING_FOG'],
-    ['FOSSIL_STALKER'],
-    ['HAUNTED_SHIP'],
-    ['CORPSE_SLUG', 'CORPSE_SLUG'],
-    ['PUNCH_CONSTRUCT'],
     ['SEAPUNK'],
     ['SEWER_CLAM'],
-    ['SLUDGE_SPINNER'],
     ['TOADPOLE', 'TOADPOLE'],
-    ['FAT_GREMLIN', 'GREMLIN_MERC', 'SNEAKY_GREMLIN'],
+    ['FAT_GREMLIN', 'GREMLIN_MERC'],
     ['TWO_TAILED_RAT'],
-    ['CALCIFIED_CULTIST', 'SEAPUNK'],
+    ['SLUDGE_SPINNER'],
+    ['MAWLER'],
+    ['FUZZY_WURM_CRAWLER', 'SHRINKER_BEETLE'],
   ],
-  ELITE: [
-    // Overgrowth
+
+  // ── Underdocks 后期普通战斗 (col 9-10) ─────────────────────────────────
+  NORMAL_LATE: [
+    ['FOSSIL_STALKER'],
+    ['HAUNTED_SHIP'],
+    ['PUNCH_CONSTRUCT'],
+    ['CORPSE_SLUG', 'CORPSE_SLUG'],
+    ['FAT_GREMLIN', 'GREMLIN_MERC', 'SNEAKY_GREMLIN'],
+    ['CALCIFIED_CULTIST', 'SEAPUNK'],
+    ['VINE_SHAMBLER'],
+    ['AXE_RAIDER', 'BRUTE_RAIDER'],
+    ['TWO_TAILED_RAT'],
+  ],
+
+  // ── Overgrowth 精英 (col 4 anchor) ─────────────────────────────────────
+  ELITE_EARLY: [
     ['BYGONE_EFFIGY'],
     ['BYRDONIS'],
     ['PHROG_PARASITE', 'WRIGGLER'],
-    // Underdocks
+  ],
+
+  // ── Underdocks 精英 (col 5-10 中出现的精英节点) ─────────────────────────
+  ELITE_LATE: [
     ['PHANTASMAL_GARDENER'],
     ['SKULKING_COLONY'],
     ['TERROR_EEL'],
   ],
+
   BOSS: [
     // Overgrowth
     ['CEREMONIAL_BEAST'],
