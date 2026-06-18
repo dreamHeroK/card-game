@@ -6,6 +6,7 @@ import BattleRewardScreen from './components/BattleRewardScreen.jsx'
 import ShopScreen from './components/ShopScreen.jsx'
 import RestScreen from './components/RestScreen.jsx'
 import EventScreen from './components/EventScreen.jsx'
+import CardGallery from './CardGallery.jsx'
 import './App.css'
 
 function MainMenu({ dispatch }) {
@@ -85,6 +86,10 @@ function Victory({ dispatch, state }) {
 }
 
 export default function App() {
+  if (new URLSearchParams(window.location.search).get('gallery') === '1') {
+    return <CardGallery />
+  }
+
   const [state, dispatch] = useReducer(gameReducer, null, createInitialState)
 
   useEffect(() => {
